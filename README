@@ -1,0 +1,2 @@
+mkdir -pv /opt/logs/supervisord/
+mkdir -pv /opt/logs/smart_home/
