@@ -64,6 +64,7 @@ class MainHandler(tornado.web.RequestHandler):
 
 	def post(self):
 		msg = self.parse_msg()
+		echostr = None
 		logging.info( msg)
 		#设置返回数据模板	
 		#纯文本格式
@@ -101,9 +102,22 @@ class MainHandler(tornado.web.RequestHandler):
 			else:
 				# self.unbind()
 				echostr = None
-		else:
+
+		elif msg["MsgType"] == "text":
+			content = msg[Content]
+			if msg[Content] == 'list':
+				content = pi_id_list()
+			elif msg[Content].startswith('bind'):
+				pi_id = msg[Content][4:]
+				if bind(msg['FromUserName'], pi_id):
+					content = 'bind ok'
+				else:
+					content = 'bind fail'
 			logging.info('pictext')
-			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', msg['Content'], ' ', ' ')
+			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "content")
+
+		elif msg["MsgType"] == "image":
+			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', content, msg['PicUrl'], msg['PicUrl'])
 
 		logging.info(echostr)
 		self.finish(echostr) 
@@ -123,12 +137,16 @@ class MainHandler(tornado.web.RequestHandler):
 		return msg
 
 	def bind(self, pid, sn):
-
+		PiSocketHandlerHandler.bind_wx(pid, sn)
 		return
 
 	def unbind(self, pid):
 
 		return
+
+	def pi_id_list(self):
+
+		return 'list is null'
 
 
 class PiSocketHandlerHandler(tornado.websocket.WebSocketHandler):
