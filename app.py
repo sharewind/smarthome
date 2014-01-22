@@ -149,8 +149,10 @@ class MainHandler(tornado.web.RequestHandler):
 	def pi_id_list(self):
 		result = None
 		pi_list = cache.smembers('pi_list')
-		for pi in pi_list:
-			result = result + pi + '\n'
+		if pi_list:
+			for pi in pi_list:
+				if pi:
+					result = result + pi + '\n'
 		return result
 
 
