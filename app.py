@@ -115,7 +115,7 @@ class MainHandler(tornado.web.RequestHandler):
 
 			elif content.startswith('roll'):
 				temp = content.split(' ')
-				if len(temp) == 1:
+				if content == 'roll':
 					content = random.randint(1, 100)
 				elif len(temp) == 2:
 					content = random.randint(1, temp[1])
