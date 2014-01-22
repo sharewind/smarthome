@@ -94,6 +94,8 @@ class MainHandler(tornado.web.RequestHandler):
 		</Articles>
 		<FuncFlag>1</FuncFlag>
 		</xml> """
+
+
 		#判断Message类型，如果等于"Event"，表明是一个新关注用户
 		if msg["MsgType"] == "event":
 			if msg["Event"] == "subscribe":
@@ -107,12 +109,24 @@ class MainHandler(tornado.web.RequestHandler):
 		elif msg["MsgType"] == "text":
 			result = ''
 			content = msg['Content']
-			if msg['Content'] == 'list':
+
+			if content == 'list':
 				content = self.pi_id_list()
-			elif msg['Content'] == 'help':
+
+			elif content.startswith('roll'):
+				temp = content.split(' ')
+				if len(temp) == 1:
+					content = random.randint(1, 100)
+				elif len(temp) == 2:
+					content = random.randint(1, temp[1])
+				elif len(temp) == 3:
+					content = random.randint(temp[1], temp[2])
+
+			elif content == 'help':
 				content = '输入list获取设备ID列表\n输入bind+设备ID绑定设备'
-			elif msg['Content'].startswith('bind'):
-				pi_id = msg['Content'][4:]
+
+			elif content.startswith('bind'):
+				pi_id = content[4:]
 				logging.info('pi_id:' + pi_id)
 				success,result = self.bind(msg['FromUserName'], pi_id)
 				logging.info(success)
@@ -121,6 +135,7 @@ class MainHandler(tornado.web.RequestHandler):
 					content = 'bind ok'
 				else:
 					content = 'bind fail'
+
 			logging.info(content)
 			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content + result)
 
