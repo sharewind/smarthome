@@ -151,8 +151,8 @@ class MainHandler(tornado.web.RequestHandler):
 		elif content == 'help':
 			content = self.help()
 
-		elif content =='unbind':
-			self.unbind(msg['FromUserName'])
+		elif content == 'unbind':
+			content = self.unbind(msg['FromUserName'])
 
 		elif content.startswith('bind'):
 			pi_id = content[4:]
