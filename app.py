@@ -111,12 +111,13 @@ class MainHandler(tornado.web.RequestHandler):
 			elif msg['Content'].startswith('bind'):
 				pi_id = msg['Content'][4:]
 				logging.info('pi_id:' + pi_id)
-				if self.bind(msg['FromUserName'], pi_id):
+				success,msg = self.bind(msg['FromUserName'], pi_id)
+				if success:
 					content = 'bind ok'
 				else:
 					content = 'bind fail'
 			logging.info('pictext')
-			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
+			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content + msg)
 
 		elif msg["MsgType"] == "image":
 			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
@@ -139,8 +140,8 @@ class MainHandler(tornado.web.RequestHandler):
 		return msg
 
 	def bind(self, pid, sn):
-		PiSocketHandler.bind_wx(pid, sn)
-		return
+		
+		return PiSocketHandler.bind_wx(pid, sn)
 
 	def unbind(self, pid):
 
@@ -188,30 +189,34 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 		del PiSocketHandler.pi_clients[pi_id]
 		# del PiSocketHandler.pi_wx_dict[pi_id]
 		cache.delete('pi:' + pi_id)
-		cache.smove('pi_list', pi_id)
+		cache.srem('pi_list', pi_id)
 
 	@classmethod
 	def bind_wx(cls, wx_id, pi_id):
 		if (not wx_id) or (not pi_id):
 			logging.error("Error bind pi client! wx_id=%s, pi_id=%s", wx_id, pi_id)
-			return 
-		if not PiSocketHandler.pi_clients.get(pi_id):
+			return False, '参数不全'
+		elif not PiSocketHandler.pi_clients.get(pi_id):
 			logging.error("Error bind pi client not connected! wx_id=%s, pi_id=%s", wx_id, pi_id)
-			return 
+			return False, '设备' + pi_id + '未连接'
 
-		# if cls.wx_pi_dict.get(wx_id):
-		if cache.get(wx_id):
-			logging.error("bind wx_id repeat! wx_id=%s, pi_id=%s", wx_id, pi_id)
-			return
+		
 		# if cls.pi_wx_dict.get(pi_id):
-		if cache.get(pi_id):
+		elif cache.get(pi_id):
 			logging.error("bind pi_id repeat! wx_id=%s, pi_id=%s", wx_id, pi_id)
-			return
-
+			return False, '设备' + pi_id + '已被绑定'
+		# if cls.wx_pi_dict.get(wx_id):
+		elif cache.get(wx_id):
+			logging.info("bind wx_id repeat! wx_id=%s, pi_id=%s", wx_id, pi_id)
+			msg = '微信重新绑定' + pi_id
+		else:
+			msg = '绑定成功'
 		# cls.wx_pi_dict[wx_id] = pi_id
 		# cls.pi_wx_dict[pi_id] = wx_id
 		cache.set('wx:' + wx_id, pi_id)
 		cache.set('pi:' + pi_id, wx_id)
+
+		return True, msg
 		
 
 #    @classmethod
