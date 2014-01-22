@@ -112,6 +112,8 @@ class MainHandler(tornado.web.RequestHandler):
 				pi_id = msg['Content'][4:]
 				logging.info('pi_id:' + pi_id)
 				success,msg = self.bind(msg['FromUserName'], pi_id)
+				logging.info(success)
+				logging.info(msg)
 				if success:
 					content = 'bind ok'
 				else:
