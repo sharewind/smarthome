@@ -110,7 +110,7 @@ class MainHandler(tornado.web.RequestHandler):
 			response = self.text(msg['Content'], msg)
 
 		elif msg["MsgType"] == "image":
-			response = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
+			response = self.image(msg)
 
 		logging.info(response)
 		PiSocketHandler.send_message(msg['FromUserName'], msg)
@@ -131,8 +131,8 @@ class MainHandler(tornado.web.RequestHandler):
 	def event(self, event, msg):
 		if msg["Event"] == "subscribe":
 			# self.bind()
-			logging.info('text')
-			response = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "欢迎关注！\n输入list获取设备ID列表\n输入bind+设备ID绑定设备\nroll")
+			help = self.help()
+			return textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "欢迎关注！\n" + help)
 		else:
 			# self.unbind()
 			response = None
@@ -149,7 +149,7 @@ class MainHandler(tornado.web.RequestHandler):
 			content = self.open()
 
 		elif content == 'help':
-			content = '输入list获取设备ID列表\n输入bind+设备ID绑定设备\nroll'
+			content = self.help()
 
 		elif content =='unbind':
 			self.unbind(msg['FromUserName'])
@@ -164,8 +164,7 @@ class MainHandler(tornado.web.RequestHandler):
 		return response
 
 	def image(self, msg):
-		help = self.help()
-		return textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "欢迎关注！\n" + help)
+		return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 	def help(self):
 		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nroll'
