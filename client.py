@@ -47,6 +47,7 @@ class WebSocketClient:
 		self.connect_timeout = connect_timeout
 		self.ws = None
 		self.init_websocket()
+		self.ioloop = tornado.ioloop.IOLoop.instance()
 
 	def message_handler(self, message):
 		logging.info("receive message=%s", message)
@@ -61,7 +62,7 @@ class WebSocketClient:
 	def on_close(self):
 		logging.info("close websocket connection!")
 		self.ws = None
-		tornado.ioloop.IOLoop.instance().add_callback(self.init_websocket)
+		self.ioloop.add_timeout(self.ioloop.time() + 5, self.init_websocket)
 
 	def init_websocket(self):
 		logging.info("connect to %s ....", self.url)
@@ -106,7 +107,7 @@ def main():
 	app.listen(options.port)
 
 	pi_id = 113696732
-	url = "ws://go123.us:8600/smartsocket?pi_id=" + str(pi_id)
+	url = "ws://go123.us/smartsocket?pi_id=" + str(pi_id)
 	client = WebSocketClient(pi_id, url,my_on_message) 
 	tornado.ioloop.IOLoop.instance().start()
 
