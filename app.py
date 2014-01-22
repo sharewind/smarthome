@@ -109,6 +109,8 @@ class MainHandler(tornado.web.RequestHandler):
 			content = msg['Content']
 			if msg['Content'] == 'list':
 				content = self.pi_id_list()
+			elif msg['Content'] == 'help':
+				content = '输入list获取设备ID列表\n输入bind+设备ID绑定设备'
 			elif msg['Content'].startswith('bind'):
 				pi_id = msg['Content'][4:]
 				logging.info('pi_id:' + pi_id)
