@@ -114,7 +114,7 @@ class MainHandler(tornado.web.RequestHandler):
 				else:
 					content = 'bind fail'
 			logging.info('pictext')
-			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "content")
+			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
 
 		elif msg["MsgType"] == "image":
 			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
