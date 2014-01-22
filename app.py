@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 
 """
@@ -10,6 +11,13 @@ import tornado.web
 import tornado.websocket
 import os.path
 import uuid
+import tornado.autoreload
+import hashlib
+import xml.etree.ElementTree as ET
+import urllib2
+# import requests
+import json
+import time
 
 from tornado.options import define, options
 
