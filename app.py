@@ -128,7 +128,7 @@ class MainHandler(tornado.web.RequestHandler):
 			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 		logging.info(echostr)
-		PiSocketHandler.send_message(msg['FromUserName'], echostr)
+		PiSocketHandler.send_message(msg['FromUserName'], msg)
 		self.finish(echostr) 
 
 	def parse_msg(self):
@@ -209,11 +209,11 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 
 		
 		# if cls.pi_wx_dict.get(pi_id):
-		elif cache.get(pi_id):
+		elif cache.get('pi:' + pi_id):
 			logging.error("bind pi_id repeat! wx_id=%s, pi_id=%s", wx_id, pi_id)
 			return False, '设备' + pi_id + '已被绑定'
 		# if cls.wx_pi_dict.get(wx_id):
-		elif cache.get(wx_id):
+		elif cache.get('wx:' + wx_id):
 			logging.info("bind wx_id repeat! wx_id=%s, pi_id=%s", wx_id, pi_id)
 			msg = '微信重新绑定' + pi_id
 		else:
