@@ -104,11 +104,11 @@ class MainHandler(tornado.web.RequestHandler):
 				echostr = None
 
 		elif msg["MsgType"] == "text":
-			content = msg[Content]
-			if msg[Content] == 'list':
+			content = msg['Content']
+			if msg['Content'] == 'list':
 				content = pi_id_list()
-			elif msg[Content].startswith('bind'):
-				pi_id = msg[Content][4:]
+			elif msg['Content'].startswith('bind'):
+				pi_id = msg['Content'][4:]
 				if bind(msg['FromUserName'], pi_id):
 					content = 'bind ok'
 				else:
@@ -117,7 +117,7 @@ class MainHandler(tornado.web.RequestHandler):
 			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "content")
 
 		elif msg["MsgType"] == "image":
-			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', content, msg['PicUrl'], msg['PicUrl'])
+			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 		logging.info(echostr)
 		self.finish(echostr) 
