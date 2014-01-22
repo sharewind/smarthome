@@ -105,6 +105,7 @@ class MainHandler(tornado.web.RequestHandler):
 				echostr = None
 
 		elif msg["MsgType"] == "text":
+			result = ''
 			content = msg['Content']
 			if msg['Content'] == 'list':
 				content = self.pi_id_list()
