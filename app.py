@@ -15,7 +15,6 @@ import tornado.autoreload
 import hashlib
 import xml.etree.ElementTree as ET
 import urllib2
-# import requests
 import json
 import time
 
@@ -98,15 +97,13 @@ class MainHandler(tornado.web.RequestHandler):
 			if msg["Event"] == "subscribe":
 				# self.bind()
 				logging.info('text')
-				echostr = textTpl % (
-					msg['FromUserName'], msg['ToUserName'], str(int(time.time())), msg['MsgType'],
-					u"欢迎关注！")
+				echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "欢迎关注！")
 			else:
 				# self.unbind()
 				echostr = None
 		else:
 			logging.info('pictext')
-			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), ' ', ' ', ' ', ' ')
+			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', msg['Content'], ' ', ' ')
 
 		logging.info(echostr)
 		self.finish(echostr) 
