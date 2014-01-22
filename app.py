@@ -185,7 +185,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 		PiSocketHandler.pi_clients[pi_id] = self
 		PiSocketHandler.clients_pi[self] = pi_id
 		cache.sadd('pi_list', pi_id)
-		self.write_message("welcome to smart service!")
+		self.write_message("welcome")
 
 	def on_close(self):
 		pi_id = self.get_argument("pi_id",None)
