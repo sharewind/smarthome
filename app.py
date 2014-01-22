@@ -99,7 +99,7 @@ class MainHandler(tornado.web.RequestHandler):
 			if msg["Event"] == "subscribe":
 				# self.bind()
 				logging.info('text')
-				echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "欢迎关注！输入list获取设备ID列表")
+				echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "欢迎关注！\n输入list获取设备ID列表\n输入bind+设备ID绑定设备")
 			else:
 				# self.unbind()
 				echostr = None
