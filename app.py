@@ -24,6 +24,31 @@ from tornado.options import define, options
 
 define("port", default=8888, help="run on the given port", type=int)
 cache = redis.Redis(host='107.170.255.136', port=6379, db=0)
+textTpl = """<xml>
+<ToUserName><![CDATA[%s]]></ToUserName>
+<FromUserName><![CDATA[%s]]></FromUserName>
+<CreateTime>%s</CreateTime>
+<MsgType><![CDATA[%s]]></MsgType>
+<Content><![CDATA[%s]]></Content>
+<FuncFlag>0</FuncFlag>
+</xml>"""
+#图文格式
+pictextTpl = """<xml>
+<ToUserName><![CDATA[%s]]></ToUserName>
+<FromUserName><![CDATA[%s]]></FromUserName>
+<CreateTime>%s</CreateTime>
+<MsgType><![CDATA[news]]></MsgType>
+<ArticleCount>1</ArticleCount>
+<Articles>
+<item>
+<Title><![CDATA[%s]]></Title>
+<Description><![CDATA[%s]]></Description>
+<PicUrl><![CDATA[%s]]></PicUrl>
+<Url><![CDATA[%s]]></Url>
+</item>
+</Articles>
+<FuncFlag>1</FuncFlag>
+</xml> """
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -43,109 +68,109 @@ class Application(tornado.web.Application):
 
 
 class MainHandler(tornado.web.RequestHandler):
+
+	
+
 	def get(self):
 		token = 'guzhen'
 		signature = self.get_argument('signature', None)
 		timestamp = self.get_argument('timestamp', None)
 		nonce = self.get_argument('nonce', None)
-		echostr = self.get_argument('echostr', None)
-		logging.info(token) 
-		logging.info( signature )
-		logging.info( timestamp )
-		logging.info( nonce )
-		logging.info( echostr)
+		response = self.get_argument('response', None)
+		# logging.info(token) 
+		# logging.info( signature )
+		# logging.info( timestamp )
+		# logging.info( nonce )
+		# logging.info( response)
 		tmpList = [token, timestamp, nonce]
 		tmpList.sort()
 		tmpstr = "%s%s%s" % tuple(tmpList)
 		hashstr = hashlib.sha1(tmpstr).hexdigest()
-		logging.info( hashstr)
+		# logging.info( hashstr)
 		if hashstr == signature:
-			self.finish(echostr) 
+			self.finish(response) 
 		else:
-			self.finish('None')
+			self.finish('验证失败')
 
 	def post(self):
 		msg = self.parse_msg()
-		echostr = None
+		response = None
 		logging.info( msg)
 		#设置返回数据模板	
 		#纯文本格式
-		textTpl = """<xml>
-		<ToUserName><![CDATA[%s]]></ToUserName>
-		<FromUserName><![CDATA[%s]]></FromUserName>
-		<CreateTime>%s</CreateTime>
-		<MsgType><![CDATA[%s]]></MsgType>
-		<Content><![CDATA[%s]]></Content>
-		<FuncFlag>0</FuncFlag>
-		</xml>"""
-		#图文格式
-		pictextTpl = """<xml>
-		<ToUserName><![CDATA[%s]]></ToUserName>
-		<FromUserName><![CDATA[%s]]></FromUserName>
-		<CreateTime>%s</CreateTime>
-		<MsgType><![CDATA[news]]></MsgType>
-		<ArticleCount>1</ArticleCount>
-		<Articles>
-		<item>
-		<Title><![CDATA[%s]]></Title>
-		<Description><![CDATA[%s]]></Description>
-		<PicUrl><![CDATA[%s]]></PicUrl>
-		<Url><![CDATA[%s]]></Url>
-		</item>
-		</Articles>
-		<FuncFlag>1</FuncFlag>
-		</xml> """
+		
 
 
 		#判断Message类型，如果等于"Event"，表明是一个新关注用户
 		if msg["MsgType"] == "event":
-			if msg["Event"] == "subscribe":
-				# self.bind()
-				logging.info('text')
-				echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "欢迎关注！\n输入list获取设备ID列表\n输入bind+设备ID绑定设备")
-			else:
-				# self.unbind()
-				echostr = None
+			response = self.event(msg["Event"], msg)
+			
 
 		elif msg["MsgType"] == "text":
-			result = ''
-			content = msg['Content']
-
-			if content == 'list':
-				content = self.pi_id_list()
-
-			elif content.startswith('roll'):
-				temp = content.split(' ')
-				if content == 'roll':
-					content = str(random.randint(1, 100))
-				elif len(temp) == 2:
-					content = str(random.randint(1, temp[1]))
-				elif len(temp) == 3:
-					content = str(random.randint(temp[1], temp[2]))
-
-			elif content == 'help':
-				content = '输入list获取设备ID列表\n输入bind+设备ID绑定设备'
-
-			elif content.startswith('bind'):
-				pi_id = content[4:]
-				logging.info('pi_id:' + pi_id)
-				success,result = self.bind(msg['FromUserName'], pi_id)
-				logging.info(success)
-				logging.info(result)
-				if success:
-					content = 'bind ok'
-				else:
-					content = 'bind fail'
-
-			logging.info(content)
-			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content + result)
+			response = self.text(msg['Content'], msg)
 
 		elif msg["MsgType"] == "image":
-			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
+			response = self.image(msg)
 
-		logging.info(echostr)
+		logging.info(response)
 		PiSocketHandler.send_message(msg['FromUserName'], msg)
-		self.finish(echostr) 
+		self.finish(response) 
+
+	def roll(self, content):
+		temp = content.split(' ')
+		if content == 'roll':
+			content = str(random.randint(1, 100))
+		elif len(temp) == 2:
+			if temp[1].isdigit() and int(temp[1]) > 0:
+				content = str(random.randint(1, int(temp[1])))
+		elif len(temp) == 3:
+			if temp[1].isdigit() and int(temp[1]) > 0 and temp[2].isdigit() and temp[1] <= temp[2]:
+				content = str(random.randint(int(temp[1]), int(temp[2])))
+		return content
+
+	def event(self, event, msg):
+		if msg["Event"] == "subscribe":
+			# self.bind()
+			help = self.help()
+			return textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "欢迎关注！\n" + help)
+		else:
+			# self.unbind()
+			response = None
+
+	def text(self, content, msg):
+
+		if content == 'list':
+			content = self.pi_id_list()
+
+		elif content.startswith('roll'):
+			content = self.roll(content)
+
+		elif content == 'open':
+			content = self.open()
+
+		elif content == 'help':
+			content = self.help()
+
+		elif content == 'unbind':
+			content = self.unbind(msg['FromUserName'])
+
+		elif content.startswith('bind'):
+			pi_id = content[4:]
+			logging.info('pi_id:' + pi_id)
+			content = self.bind(msg['FromUserName'], pi_id)
+
+		logging.info(content)
+		response = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
+		return response
+
+	def image(self, msg):
+		return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
+
+	def help(self):
+		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nroll'
+
+	def open(self):
+		return "can't use"
 
 	def parse_msg(self):
 		"""
@@ -161,23 +186,32 @@ class MainHandler(tornado.web.RequestHandler):
 			msg[child.tag] = child.text
 		return msg
 
-	def bind(self, pid, sn):
+	def bind(self, wxid, piid):
 		
-		return PiSocketHandler.bind_wx(pid, sn)
+		success,msg = PiSocketHandler.bind_wx(wxid, piid)
+		if success:
+			msg = 'bind ok' + msg
+		else:
+			msg = 'bind fail' + msg
+		return msg
 
-	def unbind(self, pid):
-
-		return
+	def unbind(self, wxid):
+		success,msg = PiSocketHandler.unbind_wx(wxid)
+		if success:
+			msg = 'unbind ok' + msg
+		else:
+			msg = 'unbind fail' + msg
+		return msg
 
 	def pi_id_list(self):
-		result = 'list id null'
+		msg = 'list is null'
 		pi_list = cache.smembers('pi_list')
 		if pi_list:
-			result = ''
+			msg = ''
 			for pi in pi_list:
 				if pi:
-					result = result + pi + '\n'
-		return result
+					msg = msg + pi + '\n'
+		return msg
 
 
 class PiSocketHandler(tornado.websocket.WebSocketHandler):
@@ -240,6 +274,24 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 		cache.set('pi:' + pi_id, wx_id)
 
 		return True, msg
+
+	@classmethod
+	def unbind_wx(cls, wx_id):
+		if not wx_id:
+			logging.error("Error unbind pi client! wx_id=%s", wx_id)
+			return False, '参数不全'
+
+		elif not cache.get('wx:' + wx_id):
+			logging.error("Error unbind pi client not binded! wx_id=%s", wx_id)
+			return False, '微信' + wx_id + '未绑定'
+
+		elif cache.get('wx:' + wx_id):
+			msg = '解绑成功'
+			pi_id = cache.get('wx:' + wx_id)
+			cache.delete('wx:' + wx_id)
+			cache.delete('pi:' + pi_id)
+
+			return True, msg
 		
 
 #    @classmethod
