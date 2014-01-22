@@ -24,6 +24,31 @@ from tornado.options import define, options
 
 define("port", default=8888, help="run on the given port", type=int)
 cache = redis.Redis(host='107.170.255.136', port=6379, db=0)
+textTpl = """<xml>
+<ToUserName><![CDATA[%s]]></ToUserName>
+<FromUserName><![CDATA[%s]]></FromUserName>
+<CreateTime>%s</CreateTime>
+<MsgType><![CDATA[%s]]></MsgType>
+<Content><![CDATA[%s]]></Content>
+<FuncFlag>0</FuncFlag>
+</xml>"""
+#图文格式
+pictextTpl = """<xml>
+<ToUserName><![CDATA[%s]]></ToUserName>
+<FromUserName><![CDATA[%s]]></FromUserName>
+<CreateTime>%s</CreateTime>
+<MsgType><![CDATA[news]]></MsgType>
+<ArticleCount>1</ArticleCount>
+<Articles>
+<item>
+<Title><![CDATA[%s]]></Title>
+<Description><![CDATA[%s]]></Description>
+<PicUrl><![CDATA[%s]]></PicUrl>
+<Url><![CDATA[%s]]></Url>
+</item>
+</Articles>
+<FuncFlag>1</FuncFlag>
+</xml> """
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -44,31 +69,7 @@ class Application(tornado.web.Application):
 
 class MainHandler(tornado.web.RequestHandler):
 
-	textTpl = """<xml>
-	<ToUserName><![CDATA[%s]]></ToUserName>
-	<FromUserName><![CDATA[%s]]></FromUserName>
-	<CreateTime>%s</CreateTime>
-	<MsgType><![CDATA[%s]]></MsgType>
-	<Content><![CDATA[%s]]></Content>
-	<FuncFlag>0</FuncFlag>
-	</xml>"""
-	#图文格式
-	pictextTpl = """<xml>
-	<ToUserName><![CDATA[%s]]></ToUserName>
-	<FromUserName><![CDATA[%s]]></FromUserName>
-	<CreateTime>%s</CreateTime>
-	<MsgType><![CDATA[news]]></MsgType>
-	<ArticleCount>1</ArticleCount>
-	<Articles>
-	<item>
-	<Title><![CDATA[%s]]></Title>
-	<Description><![CDATA[%s]]></Description>
-	<PicUrl><![CDATA[%s]]></PicUrl>
-	<Url><![CDATA[%s]]></Url>
-	</item>
-	</Articles>
-	<FuncFlag>1</FuncFlag>
-	</xml> """
+	
 
 	def get(self):
 		token = 'guzhen'
