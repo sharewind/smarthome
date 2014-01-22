@@ -111,7 +111,7 @@ class MainHandler(tornado.web.RequestHandler):
 			elif msg['Content'].startswith('bind'):
 				pi_id = msg['Content'][4:]
 				logging.info('pi_id:' + pi_id)
-				success,msg = self.bind(msg['FromUserName'], pi_id)
+				success,result = self.bind(msg['FromUserName'], pi_id)
 				logging.info(success)
 				logging.info(msg)
 				if success:
@@ -119,7 +119,7 @@ class MainHandler(tornado.web.RequestHandler):
 				else:
 					content = 'bind fail'
 			logging.info(content)
-			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', msg)
+			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content + result)
 
 		elif msg["MsgType"] == "image":
 			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
