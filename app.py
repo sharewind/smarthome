@@ -203,7 +203,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			return False, '参数不全'
 		elif not PiSocketHandler.pi_clients.get(pi_id):
 			logging.error("Error bind pi client not connected! wx_id=%s, pi_id=%s", wx_id, pi_id)
-			return False, '设备' + pi_id + '未连接'
+			return False, '设备' + pi_id + '未连接或不存在'
 
 		
 		# if cls.pi_wx_dict.get(pi_id):
