@@ -128,7 +128,7 @@ class MainHandler(tornado.web.RequestHandler):
 			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 		logging.info(echostr)
-		PiSocketHandler.send_message(msg['FromUserName'], echostr)
+		PiSocketHandler.send_message(msg['FromUserName'], msg)
 		self.finish(echostr) 
 
 	def parse_msg(self):
