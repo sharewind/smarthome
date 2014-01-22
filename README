@@ -1,3 +1,11 @@
 mkdir -pv /opt/logs/nginx/
 mkdir -pv /opt/logs/supervisord/
 mkdir -pv /opt/logs/smart_home/
+
+
+sudo apt-get install bavahi-compat-libdnssd1
+virtualenv
+tornado=3.2
+redis
+supervisor
+pybonjour

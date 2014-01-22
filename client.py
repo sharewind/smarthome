@@ -50,10 +50,13 @@ class WebSocketClient:
 
 	def message_handler(self, message):
 		logging.info("receive message=%s", message)
-		if message is None:
-			self.on_close()
-		else:
-			self.on_message(message)
+		try:
+			if message is None:
+				self.on_close()
+			else:
+				self.on_message(message)
+		except Exception,e:
+			logging.error("on_message error %s", e)
 
 	def on_close(self):
 		logging.info("close websocket connection!")
@@ -70,7 +73,7 @@ class WebSocketClient:
 
 			logging.info("connectd success! %s", result.result())
 			self.ws = result.result()
-			self.ws.on_message = self.on_message
+			self.ws.on_message = self.message_handler
 			self.send_message("hi")
 		self.ws = tornado.websocket.websocket_connect(self.url, callback=callback)  
 
