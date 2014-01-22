@@ -150,7 +150,7 @@ class MainHandler(tornado.web.RequestHandler):
 		result = None
 		pi_list = cache.smembers('pi_list')
 		for pi in pi_list:
-			result += pi + '\n'
+			result = result + pi + '\n'
 		return result
 
 
