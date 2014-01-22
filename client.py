@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 
 """
@@ -9,11 +10,12 @@ import tornado.web
 import tornado.websocket
 import os.path
 import uuid
+import json
+from mdns_util import MDNS
 
 from tornado.options import define, options
 
 define("port", default=4444, help="run on the given port", type=int)
-
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -87,28 +89,76 @@ class WebSocketClient:
 		except Exception,e:
 			logging.error("send message error=%s",e)
 
-client = None
+class Airplay(object):
+	ioloop = tornado.ioloop.IOLoop.instance()
+	mdns = MDNS(ioloop)
+	#mdns.register('My HTTP Service', '_http._tcp', 8080)
+	server_list = set()
+
+	@classmethod
+	def list_airplay(cls):
+		logging.info("airplay start discover")
+		cls.server_list = {} 
+		def on_discovered(index, fullname, host, port, txtRecord):
+			item = {'index':index,'fullname':fullname,'host':host,'port':port, 'txtRecord':txtRecord}
+			logging.info("airplay discoverd fullname %s, %s", fullname, fullname.decode('utf8'))
+			logging.info("airplay discoverd %s", item)
+			cls.server_list[index] = item	
+		
+		def on_lost(index, name, regtype, domain):
+			logging.info("airplay on_list")
+			
+	
+		regtype = '_airplay._tcp'
+		cls.mdns.discover(regtype, on_discovered, on_lost)
+		cls.ioloop.add_timeout(cls.ioloop.time() + 5, cls.end_discover)
+
+	@classmethod
+	def end_discover(cls):
+		logging.info("airplay end_discover")
+		logging.info("airplay discoverd list %s", cls.server_list)
+		
+		try:
+			#regtype = '_airplay._tcp'
+			regtype = '_airplay._tcp'
+			cls.mdns.end_discovery(regtype)
+			content = json.dumps(cls.server_list)
+			get_client().send_message(content)
+			cls.server_list = {}
+		except Exception,e:
+			logging.error("airplay end_discovery error %s", e)
+
 
 def my_on_message(message):
 	logging.info("on message processing .....")
 	if "welcome" == message:
 		logging.info("server respone welcome!")
+		#Airplay.list_airplay()
 		return
 	elif "airplay_list" == message:
-		client.send_message("my airplay server")
+		Airplay.list_airplay()
+		#client.send_message("my airplay server")
 		return
 	else:
 		logging.warn("unregonize message=%s", message)
 		return
+
+client = None
+def get_client():
+	global client
+	if client is None:
+		pi_id = 113696732
+		url = "ws://go123.us/smartsocket?pi_id=" + str(pi_id)
+		client = WebSocketClient(pi_id, url,my_on_message) 
+	return client
+	
 
 def main():
 	tornado.options.parse_command_line()
 	app = Application()
 	app.listen(options.port)
 
-	pi_id = 113696732
-	url = "ws://go123.us/smartsocket?pi_id=" + str(pi_id)
-	client = WebSocketClient(pi_id, url,my_on_message) 
+	get_client()
 	tornado.ioloop.IOLoop.instance().start()
 
 
