@@ -117,11 +117,11 @@ class MainHandler(tornado.web.RequestHandler):
 			elif content.startswith('roll'):
 				temp = content.split(' ')
 				if content == 'roll':
-					content = random.randint(1, 100)
+					content = str(random.randint(1, 100))
 				elif len(temp) == 2:
-					content = random.randint(1, temp[1])
+					content = str(random.randint(1, temp[1]))
 				elif len(temp) == 3:
-					content = random.randint(temp[1], temp[2])
+					content = str(random.randint(temp[1], temp[2]))
 
 			elif content == 'help':
 				content = '输入list获取设备ID列表\n输入bind+设备ID绑定设备'
