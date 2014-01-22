@@ -108,7 +108,7 @@ class MainHandler(tornado.web.RequestHandler):
 			logging.info('pictext')
 			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), ' ', ' ', ' ', ' ')
 
-		logging.info(echestr)
+		logging.info(echostr)
 		self.finish(echostr) 
 
 	def parse_msg(self):
