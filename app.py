@@ -17,11 +17,12 @@ import xml.etree.ElementTree as ET
 import urllib2
 import json
 import time
+import redis
 
 from tornado.options import define, options
 
 define("port", default=8888, help="run on the given port", type=int)
-
+cache = redis.Redis(host='107.170.255.136', port=6379, db=0)
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -29,7 +30,7 @@ class Application(tornado.web.Application):
             (r"/", MainHandler),
             (r"/bind", WeiXinBindHandler),
             (r"/wx", WeiXinHandler),
-            (r"/smartsocket", PiSocketHandlerHandler),
+            (r"/smartsocket", PiSocketHandler),
         ]
         settings = dict(
             # cookie_secret="__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__",
@@ -64,6 +65,7 @@ class MainHandler(tornado.web.RequestHandler):
 
 	def post(self):
 		msg = self.parse_msg()
+		echostr = None
 		logging.info( msg)
 		#设置返回数据模板	
 		#纯文本格式
@@ -101,9 +103,23 @@ class MainHandler(tornado.web.RequestHandler):
 			else:
 				# self.unbind()
 				echostr = None
-		else:
+
+		elif msg["MsgType"] == "text":
+			content = msg['Content']
+			if msg['Content'] == 'list':
+				content = self.pi_id_list()
+			elif msg['Content'].startswith('bind'):
+				pi_id = msg['Content'][4:]
+				logging.info('pi_id:' + pi_id)
+				if self.bind(msg['FromUserName'], pi_id):
+					content = 'bind ok'
+				else:
+					content = 'bind fail'
 			logging.info('pictext')
-			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', msg['Content'], ' ', ' ')
+			echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
+
+		elif msg["MsgType"] == "image":
+			echostr = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 		logging.info(echostr)
 		self.finish(echostr) 
@@ -123,15 +139,22 @@ class MainHandler(tornado.web.RequestHandler):
 		return msg
 
 	def bind(self, pid, sn):
-
+		PiSocketHandler.bind_wx(pid, sn)
 		return
 
 	def unbind(self, pid):
 
 		return
 
+	def pi_id_list(self):
+		result = None
+		pi_list = cache.smembers('pi_list')
+		for pi in pi_list:
+			result = result + pi + '\n'
+		return result
 
-class PiSocketHandlerHandler(tornado.websocket.WebSocketHandler):
+
+class PiSocketHandler(tornado.websocket.WebSocketHandler):
 	pi_clients = dict()
 	clients_pi = dict()
 	pi_wx_dict = dict()
@@ -149,8 +172,9 @@ class PiSocketHandlerHandler(tornado.websocket.WebSocketHandler):
 		if not pi_id:
 			logging.error("Error no pi_id header set")
 			return 
-		PiSocketHandlerHandler.pi_clients[pi_id] = self
-		PiSocketHandlerHandler.clients_pi[self] = pi_id
+		PiSocketHandler.pi_clients[pi_id] = self
+		PiSocketHandler.clients_pi[self] = pi_id
+		cache.sadd('pi_list', pi_id)
 		self.write_message("welcome to smart service!")
 
 	def on_close(self):
@@ -159,27 +183,33 @@ class PiSocketHandlerHandler(tornado.websocket.WebSocketHandler):
 		if not pi_id:
 			logging.error("Error no pi_id header set")
 			return 
-		del PiSocketHandlerHandler.pi_clients[pi_id]
-		del PiSocketHandlerHandler.pi_wx_dict[pi_id]
+		del PiSocketHandler.pi_clients[pi_id]
+		# del PiSocketHandler.pi_wx_dict[pi_id]
+		cache.delete('pi:' + pi_id)
+		cache.smove('pi_list', pi_id)
 
 	@classmethod
 	def bind_wx(cls, wx_id, pi_id):
 		if (not wx_id) or (not pi_id):
 			logging.error("Error bind pi client! wx_id=%s, pi_id=%s", wx_id, pi_id)
 			return 
-		if not PiSocketHandlerHandler.pi_clients.get(pi_id):
+		if not PiSocketHandler.pi_clients.get(pi_id):
 			logging.error("Error bind pi client not connected! wx_id=%s, pi_id=%s", wx_id, pi_id)
 			return 
 
-		if cls.wx_pi_dict.get(wx_id):
+		# if cls.wx_pi_dict.get(wx_id):
+		if cache.get(wx_id):
 			logging.error("bind wx_id repeat! wx_id=%s, pi_id=%s", wx_id, pi_id)
 			return
-		if cls.pi_wx_dict.get(pi_id):
+		# if cls.pi_wx_dict.get(pi_id):
+		if cache.get(pi_id):
 			logging.error("bind pi_id repeat! wx_id=%s, pi_id=%s", wx_id, pi_id)
 			return
 
-		cls.wx_pi_dict[wx_id] = pi_id
-		cls.pi_wx_dict[pi_id] = wx_id
+		# cls.wx_pi_dict[wx_id] = pi_id
+		# cls.pi_wx_dict[pi_id] = wx_id
+		cache.set('wx:' + wx_id, pi_id)
+		cache.set('pi:' + pi_id, wx_id)
 		
 
 #    @classmethod
@@ -192,9 +222,9 @@ class PiSocketHandlerHandler(tornado.websocket.WebSocketHandler):
 	def send_message(cls, wx_id, message):
 		logging.info("sending message to wx_id=%s, message=%s", wx_id, message)
 		
-		pi_id = cls.wx_pi_dict.get(wx_id)
+		pi_id = cache.get("wx:" + wx_id)
 		client = cls.pi_clients.get(pi_id)
-		if not cls.wx_pi_dict.get(wx_id) or not client:
+		if not cache.get("wx:" + wx_id) or not client:
 			logging.error("Error pi client not connect")
 			return
 
@@ -210,11 +240,11 @@ class PiSocketHandlerHandler(tornado.websocket.WebSocketHandler):
 			logging.error("Error no pi_id header set")
 			return 
 		
-		if not PiSocketHandlerHandler.pi_clients.get(pi_id):
+		if not PiSocketHandler.pi_clients.get(pi_id):
 			logging.error("on_message client not regiester")
 			return 
 
-		if not PiSocketHandlerHandler.pi_wx_dict.get(pi_id):
+		if not cache.get('pi:' + pi_id):
 			logging.error("on_message not bind wx")
 			return
 		
@@ -226,22 +256,22 @@ class PiSocketHandlerHandler(tornado.websocket.WebSocketHandler):
         #chat["html"] = tornado.escape.to_basestring(
         #    self.render_string("message.html", message=chat))
 
-        #PiSocketHandlerHandler.update_cache(chat)
-        #PiSocketHandlerHandler.send_updates(chat)
+        #PiSocketHandler.update_cache(chat)
+        #PiSocketHandler.send_updates(chat)
 
 class WeiXinBindHandler(tornado.web.RequestHandler):
     def get(self):
 		wx_id = "185980656"
 		pi_id = "113696732"
-		PiSocketHandlerHandler.bind_wx(wx_id, pi_id)
-		PiSocketHandlerHandler.send_message(wx_id, "hello")
+		PiSocketHandler.bind_wx(wx_id, pi_id)
+		PiSocketHandler.send_message(wx_id, "hello")
 		self.write("bind ok")
 
 class WeiXinHandler(tornado.web.RequestHandler):
     def get(self):
 		wx_id = "185980656"
 		pi_id = "113696732"
-		PiSocketHandlerHandler.send_message(wx_id, "hello")
+		PiSocketHandler.send_message(wx_id, "hello")
 		self.write("send message ok")
 
 
