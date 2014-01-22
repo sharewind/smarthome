@@ -106,10 +106,10 @@ class MainHandler(tornado.web.RequestHandler):
 		elif msg["MsgType"] == "text":
 			content = msg['Content']
 			if msg['Content'] == 'list':
-				content = pi_id_list()
+				content = self.pi_id_list()
 			elif msg['Content'].startswith('bind'):
 				pi_id = msg['Content'][4:]
-				if bind(msg['FromUserName'], pi_id):
+				if self.bind(msg['FromUserName'], pi_id):
 					content = 'bind ok'
 				else:
 					content = 'bind fail'
