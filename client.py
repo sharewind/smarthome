@@ -70,7 +70,7 @@ def main():
 	app.listen(options.port)
 
 	pi_id = 113696732
-	url = "ws://go123.us:8600/smartsocket?pi_id=" + str(pi_id)
+	url = "ws://go123.us/smartsocket?pi_id=" + str(pi_id)
 	logging.info("connect to %s ....", url)
 	client = WebSocketClient(pi_id, url, message_handler)
 	tornado.ioloop.IOLoop.instance().start()
