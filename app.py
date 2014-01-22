@@ -99,7 +99,7 @@ class MainHandler(tornado.web.RequestHandler):
 			if msg["Event"] == "subscribe":
 				# self.bind()
 				logging.info('text')
-				echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "欢迎关注！")
+				echostr = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', "欢迎关注！输入list获取设备ID列表")
 			else:
 				# self.unbind()
 				echostr = None
@@ -152,9 +152,10 @@ class MainHandler(tornado.web.RequestHandler):
 		return
 
 	def pi_id_list(self):
-		result = ''
+		result = 'list id null'
 		pi_list = cache.smembers('pi_list')
 		if pi_list:
+			result = ''
 			for pi in pi_list:
 				if pi:
 					result = result + pi + '\n'
