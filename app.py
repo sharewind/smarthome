@@ -113,9 +113,9 @@ class MainHandler(tornado.web.RequestHandler):
 			response = self.image(msg)
 
 		logging.info(response)
-		result = self.send_message(msg['FromUserName'], msg)
-		logging.info(result)
-		self.finish(response + result) 
+		# result = self.send_message(msg['FromUserName'], msg)
+		# logging.info(result)
+		self.finish(response) 
 
 	def send_message(self, wx_id, msg):
 		PiSocketHandler.send_message(wx_id, msg)
@@ -176,6 +176,9 @@ class MainHandler(tornado.web.RequestHandler):
 			content = self.bind(msg['FromUserName'], pi_id)
 
 		logging.info(content)
+		result = self.send_message(msg['FromUserName'], msg)
+		logging.info(result)
+		content = content + result
 		response = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
 		return response
 
