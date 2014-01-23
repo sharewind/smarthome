@@ -107,14 +107,22 @@ class MainHandler(tornado.web.RequestHandler):
 			
 
 		elif msg["MsgType"] == "text":
-			response = self.text(msg['Content'], msg)
+			response = self.text(msg['Content'].strip(), msg)
 
 		elif msg["MsgType"] == "image":
 			response = self.image(msg)
 
 		logging.info(response)
-		PiSocketHandler.send_message(msg['FromUserName'], msg)
+		result = self.send_message(msg['FromUserName'], msg)
 		self.finish(response) 
+
+	def send_message(self, wx_id, msg):
+		PiSocketHandler.send_message(wx_id, msg)
+		pi_id = cache.get('wx:' + wx_id)
+		for i in range(1, 5):
+			cache.get('pi_msg:' + pi_id)
+			time.sleep(0.5)
+
 
 	def roll(self, content):
 		temp = content.split(' ')
@@ -318,6 +326,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 	def on_message(self, message):
 		pi_id = self.get_argument("pi_id",None)
 		logging.info("got message client pi_id=%s,message=%s", pi_id, message)
+
 		if not pi_id:
 			logging.error("Error no pi_id header set")
 			return 
@@ -330,6 +339,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			logging.error("on_message not bind wx")
 			return
 		
+		cache.set("pi_msg:" + pi_id, message)
         #parsed = tornado.escape.json_decode(message)
         #chat = {
         #    "id": str(uuid.uuid4()),
