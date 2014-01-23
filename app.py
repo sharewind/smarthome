@@ -114,6 +114,7 @@ class MainHandler(tornado.web.RequestHandler):
 
 		logging.info(response)
 		result = self.send_message(msg['FromUserName'], msg)
+		logging.info(result)
 		self.finish(response + result) 
 
 	def send_message(self, wx_id, msg):
@@ -121,6 +122,7 @@ class MainHandler(tornado.web.RequestHandler):
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
 			for i in range(1, 5):
+				logging.info(i)
 				msg = cache.get('pi_msg:' + pi_id)
 				if msg:
 					return msg
