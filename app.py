@@ -114,14 +114,18 @@ class MainHandler(tornado.web.RequestHandler):
 
 		logging.info(response)
 		result = self.send_message(msg['FromUserName'], msg)
-		self.finish(response) 
+		self.finish(response + result) 
 
 	def send_message(self, wx_id, msg):
 		PiSocketHandler.send_message(wx_id, msg)
 		pi_id = cache.get('wx:' + wx_id)
-		for i in range(1, 5):
-			cache.get('pi_msg:' + pi_id)
-			time.sleep(0.5)
+		if pi_id:
+			for i in range(1, 5):
+				msg = cache.get('pi_msg:' + pi_id)
+				if msg:
+					return msg
+				time.sleep(0.5)
+		return 'no msg'
 
 
 	def roll(self, content):
