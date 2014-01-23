@@ -181,7 +181,7 @@ class MainHandler(tornado.web.RequestHandler):
 			content = self.bind(msg['FromUserName'], pi_id)
 
 		logging.info(content)
-		result = self.send_message(msg['FromUserName'], msg)
+		# result = self.send_message(msg['FromUserName'], msg)
 		logging.info(result)
 		content = content + result
 		response = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
@@ -195,7 +195,7 @@ class MainHandler(tornado.web.RequestHandler):
 		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll'
 
 	def open(self, msg):
-		result = self.send_message(msg['FromUserName'], 'photo')
+		result = self.send_message(msg['FromUserName'], 'open')
 		if result:
 			return 'true'
 		return 'false'
