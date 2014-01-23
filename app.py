@@ -128,7 +128,7 @@ class MainHandler(tornado.web.RequestHandler):
 					cache.delete('pi_msg:' + pi_id)
 					return msg
 				else:
-					time.sleep(1)
+					time.sleep(0.5)
 			return 'fetch fail'
 		return 'no msg'
 
