@@ -6,6 +6,7 @@ import tornado.web
 import tornado.gen
 import tornado.websocket
 import tornado.httpclient
+import time
 import os.path
 import uuid
 import json
@@ -73,7 +74,25 @@ def display_image(url, host, port, callback=None):
 	logging.info("display image=%s, on %s:%s", url, host, port)
 	def on_fetch(image):
 		send_image_by_airplay(host, port, image)
+		upload_image(image)
 	fetch_image(url, on_fetch)
+
+def upload_image(image, callback=None):
+	logging.info("upload image....")
+	def on_upload(response):
+		if response.error:
+			logging.error("upload image error %s", response.error)
+		else:
+			logging.info("upload image success %s",response.body)
+			if callback is not None:
+				callback(response.body)
+
+	filename = str(time.time() * 1000000) + ".jpg"
+	url = "http://pp.sohu.com/upload/api/sync?device=155828489132191744&access_token=416521fd-cb90-34d5-beb5-1a0e0855d282&filename=" + filename
+	request = tornado.httpclient.HTTPRequest(url, method='POST', body=image)
+	tornado.httpclient.AsyncHTTPClient().fetch(request, on_upload)
+
+
 
 def main():
 	tornado.options.parse_command_line()
