@@ -9,6 +9,8 @@ import commands
 import uuid
 import airplay
 import json
+import datetime
+import time
 from mdns_util import MDNS
 
 from tornado.options import define, options
@@ -139,15 +141,18 @@ def my_on_message(message):
         elif "photo" == message:
 		name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
 		path = '/root/pi/take_photo/' + name + '.jpg'
+		print time.time()
 		status, msg = commands.getstatusoutput('./take.sh ' + 'photo ' + datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S'))
 		if status == 0:
 			# send
 			image = open(path, mode='rb')
-			Airplay.upload_image(image.read(), sendCallback)
+			print time.time()
+			airplay.upload_image(image.read(), sendCallback)
 		else:
 			# send error
 			client.send_message("http://img.itc.cn/photo/oMAER7INJZb")
-
+	elif message.startswith('http://'):
+		airplay.display_image(message, '10.2.58.240', '7000')
 	else:
 		logging.warn("unregonize message=%s", message)
 		return
@@ -163,7 +168,9 @@ def get_client():
 	
 
 def sendCallback(msg):
-	print msg
+	dict = eval(msg)
+	client.send_message(dict['big_url'])
+	print time.time()
 
 def main():
 	tornado.options.parse_command_line()
