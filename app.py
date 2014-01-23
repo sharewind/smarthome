@@ -125,6 +125,7 @@ class MainHandler(tornado.web.RequestHandler):
 				logging.info(i)
 				msg = cache.get('pi_msg:' + pi_id)
 				if msg:
+					cache.delete('pi_msg:' + pi_id)
 					return msg
 				else:
 					time.sleep(1)
