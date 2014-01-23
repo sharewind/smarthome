@@ -357,7 +357,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 		if not cache.get('pi:' + pi_id):
 			logging.error("on_message not bind wx")
 			return
-		
+		logging.info('photo:' + message)
 		cache.set("pi_msg:" + pi_id, message)
         #parsed = tornado.escape.json_decode(message)
         #chat = {
