@@ -182,8 +182,8 @@ class MainHandler(tornado.web.RequestHandler):
 
 		logging.info(content)
 		# result = self.send_message(msg['FromUserName'], msg)
-		logging.info(result)
-		content = content + result
+		# logging.info(result)
+		content = content
 		response = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
 		return response
 
