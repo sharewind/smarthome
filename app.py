@@ -158,11 +158,15 @@ class MainHandler(tornado.web.RequestHandler):
 		if content == 'list':
 			content = self.pi_id_list()
 
+		elif content == 'photo':
+			url = self.send_message(msg['FromUserName'], content)
+			return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'photo', 'this is a photo', url, url)
+
 		elif content.startswith('roll'):
 			content = self.roll(content)
 
 		elif content == 'open':
-			content = self.open()
+			content = self.open(msg)
 
 		elif content == 'help':
 			content = self.help()
@@ -183,13 +187,17 @@ class MainHandler(tornado.web.RequestHandler):
 		return response
 
 	def image(self, msg):
+		self.send_message(msg['FromUserName'], msg['PicUrl'])
 		return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 	def help(self):
-		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nroll'
+		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll'
 
-	def open(self):
-		return "can't use"
+	def open(self, msg):
+		result = self.send_message(msg['FromUserName'], 'photo')
+		if result:
+			return 'true'
+		return 'false'
 
 	def parse_msg(self):
 		"""
