@@ -5,7 +5,9 @@ import tornado.options
 import tornado.web
 import tornado.websocket
 import os.path
+import commands
 import uuid
+import airplay
 import json
 from mdns_util import MDNS
 
@@ -134,6 +136,18 @@ def my_on_message(message):
 		Airplay.list_airplay()
 		#client.send_message("my airplay server")
 		return
+        elif "photo" == message:
+		name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
+		path = '/root/pi/take_photo/' + name + '.jpg'
+		status, msg = commands.getstatusoutput('./take.sh ' + 'photo ' + datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S'))
+		if status == 0:
+			# send
+			image = open(path, mode='rb')
+			Airplay.upload_image(image.read(), sendCallback)
+		else:
+			# send error
+			client.send_message("http://img.itc.cn/photo/oMAER7INJZb")
+
 	else:
 		logging.warn("unregonize message=%s", message)
 		return
@@ -147,6 +161,9 @@ def get_client():
 		client = WebSocketClient(pi_id, url,my_on_message) 
 	return client
 	
+
+def sendCallback(msg):
+	print msg
 
 def main():
 	tornado.options.parse_command_line()
