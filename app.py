@@ -121,12 +121,14 @@ class MainHandler(tornado.web.RequestHandler):
 		PiSocketHandler.send_message(wx_id, msg)
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
-			for i in range(1, 5):
+			for i in range(1, 10):
 				logging.info(i)
 				msg = cache.get('pi_msg:' + pi_id)
 				if msg:
 					return msg
-				time.sleep(0.5)
+				else:
+					time.sleep(1)
+			return 'fetch fail'
 		return 'no msg'
 
 
