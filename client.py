@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-
-"""
-
 import logging
 import tornado.escape
 import tornado.options
@@ -99,10 +95,9 @@ class Airplay(object):
 	def list_airplay(cls):
 		logging.info("airplay start discover")
 		cls.server_list = {} 
-		def on_discovered(index, fullname, host, port, txtRecord):
-			item = {'index':index,'fullname':fullname,'host':host,'port':port, 'txtRecord':txtRecord}
-			logging.info("airplay discoverd fullname %s, %s", fullname, fullname.decode('utf8'))
-			logging.info("airplay discoverd %s", item)
+		def on_discovered(index, servicename, fullname, host, port, txtRecord):
+			item = {'index':index, 'servicename':servicename,'fullname':fullname,'host':host,'port':port, 'txtRecord':txtRecord}
+			logging.info("airplay discoverd %s=%s", servicename, item)
 			cls.server_list[index] = item	
 		
 		def on_lost(index, name, regtype, domain):
@@ -133,7 +128,7 @@ def my_on_message(message):
 	logging.info("on message processing .....")
 	if "welcome" == message:
 		logging.info("server respone welcome!")
-		#Airplay.list_airplay()
+		Airplay.list_airplay()
 		return
 	elif "airplay_list" == message:
 		Airplay.list_airplay()

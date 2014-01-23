@@ -88,28 +88,29 @@ class MDNS(object):
         """
         Notify listener when a service is found/lost.
         """
-
+        
         if regtype in self._discovery_refs:
             return
-
         resolution_refs = self._resolution_refs[regtype] = []
-
-        def resolve_callback(ref, flags, index, error, fullname, host,
-                             port, txtRecord):
-            """
-            Handle pybonjour results for resolution of `regtype` services.
-            """
-            on_discovered(index, fullname, host, port, txtRecord)
-            resolution_refs.remove(ref)
-            self._close_ref(ref)
-
+        
         def browse_callback(ref, flags, index, error, name, regtype, domain):
+
+            def resolve_callback(ref, flags, index, error, fullname, host,
+                                 port, txtRecord):
+                """
+                Handle pybonjour results for resolution of `regtype` services.
+                """
+                on_discovered(index, name, fullname, host, port, txtRecord)
+                resolution_refs.remove(ref)
+                self._close_ref(ref)
+            #end resove_callback
+
+
             """
             Handle pybonjour results for `regtype` services.
             """
             if flags & kDNSServiceFlagsAdd:
-                resolution_ref = resolve_dns_service(
-                    0, index, name, regtype, domain, resolve_callback)
+                resolution_ref = resolve_dns_service(0, index, name, regtype, domain, resolve_callback)
                 resolution_refs.append(resolution_ref)
                 self._handle_ref(resolution_ref)
             else:
