@@ -121,13 +121,14 @@ class MainHandler(tornado.web.RequestHandler):
 		PiSocketHandler.send_message(wx_id, msg)
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
-			for i in range(1, 10):
+			for i in range(0, 10):
 				logging.info(i)
 				msg = cache.get('pi_msg:' + pi_id)
 				if msg:
+					cache.delete('pi_msg:' + pi_id)
 					return msg
 				else:
-					time.sleep(1)
+					time.sleep(0.5)
 			return 'fetch fail'
 		return 'no msg'
 
@@ -180,9 +181,9 @@ class MainHandler(tornado.web.RequestHandler):
 			content = self.bind(msg['FromUserName'], pi_id)
 
 		logging.info(content)
-		result = self.send_message(msg['FromUserName'], msg)
-		logging.info(result)
-		content = content + result
+		# result = self.send_message(msg['FromUserName'], msg)
+		# logging.info(result)
+		content = content
 		response = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
 		return response
 
@@ -194,7 +195,7 @@ class MainHandler(tornado.web.RequestHandler):
 		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll'
 
 	def open(self, msg):
-		result = self.send_message(msg['FromUserName'], 'photo')
+		result = self.send_message(msg['FromUserName'], 'open')
 		if result:
 			return 'true'
 		return 'false'
@@ -272,7 +273,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			return 
 		del PiSocketHandler.pi_clients[pi_id]
 		# del PiSocketHandler.pi_wx_dict[pi_id]
-		cache.delete('pi:' + pi_id)
+		# cache.delete('pi:' + pi_id)
 		cache.srem('pi_list', pi_id)
 
 	@classmethod
@@ -357,7 +358,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 		if not cache.get('pi:' + pi_id):
 			logging.error("on_message not bind wx")
 			return
-		
+		logging.info('photo:' + message)
 		cache.set("pi_msg:" + pi_id, message)
         #parsed = tornado.escape.json_decode(message)
         #chat = {
