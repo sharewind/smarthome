@@ -126,7 +126,7 @@ class MainHandler(tornado.web.RequestHandler):
 				msg = cache.get('pi_msg:' + pi_id)
 				if msg:
 					cache.delete('pi_msg:' + pi_id)
-					msg = self.parse_json(msg)
+					msg = self.parse_json(wx_id, pi_id, msg)
 					logging.info('msg:' + msg)
 					return msg
 				else:
@@ -164,7 +164,7 @@ class MainHandler(tornado.web.RequestHandler):
 		elif content =='airlist':
 			content = self.airlist(msg, content)
 
-		elif content == 'bindair':
+		elif content.startswith('bindair'):
 			content == self.bindair(msg, content)
 
 		elif content == 'env':
@@ -209,7 +209,17 @@ class MainHandler(tornado.web.RequestHandler):
 		return self.send_message(msg['FromUserName'], content)
 
 	def bindair(self, msg, content):
-		return self.send_message(msg['FromUserName'], content)
+		try:
+			index = int(content[7:])
+			term = cache.lindex(index - 1)
+			if not term:
+				return 'term:' + index + ' is not exist'
+			else:
+				return self.send_message(msg['FromUserName'], term)
+		except:
+			logging.error('index is not int', exc_info=True)
+			return "please input int"
+		
 
 	def env(self, msg, content):
 		return self.send_message(msg['FromUserName'], content)
@@ -237,7 +247,7 @@ class MainHandler(tornado.web.RequestHandler):
 			msg[child.tag] = child.text
 		return msg
 
-	def parse_json(self, msg):
+	def parse_json(self, wx_id, pi_id, msg):
 		jsonmsg = json.loads(msg)
 		if jsonmsg['status']:
 			if 'photo_reply' == jsonmsg['action']:
@@ -256,10 +266,16 @@ class MainHandler(tornado.web.RequestHandler):
 				return 
 
 			elif 'airlist_reply' == jsonmsg['action']:
+				cache.delete('pi:' + pi_id + 'airlist')
 				airlist = ''
 				for data in jsonmsg['data']:
-					airlist = airlist + str(data['index']) + ':' + data['servicename'] + ':' + data['ip'] + ':' + str(data['port']) + '\n'
+					one = str(data['index']) + ':' + data['servicename'] + ':' + data['ip'] + ':' + str(data['port'])
+					airlist = airlist + one + '\n'
+					cache.rpush(data)
 				return airlist
+
+			elif 'bindair_reply' == jsonmsg['action']:
+				return jsonmsg['data']
 
 			elif 'image_reply' == jsonmsg['action']:
 				return jsonmsg['data']
