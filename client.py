@@ -196,7 +196,13 @@ def main():
 	app = Application()
 	app.listen(options.port)
 
-	get_client(sys.argv[1])
+	if len(sys.argv) == 2:
+		id = sys.argv[1]
+		
+	else:
+		id = None
+
+	get_client(id)
 	tornado.ioloop.IOLoop.instance().start()
 
 
