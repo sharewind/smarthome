@@ -117,24 +117,17 @@ class MainHandler(tornado.web.RequestHandler):
 		# logging.info(result)
 		self.finish(response) 
 
-	def send_message(self, wx_id, msg, action):
+	def send_message(self, wx_id, msg, action, async=False, msgid=None):
 		PiSocketHandler.send_message(wx_id, msg)
-		pi_id = cache.get('wx:' + wx_id)
-		if pi_id:
-			for i in range(0, 10):
-				logging.info(i)
-				msg = cache.get("pi_msg:" + pi_id + ':' + action)
-				if msg:
-					cache.delete("pi_msg:" + pi_id + ':' + action)
-					msg = self.parse_json(wx_id, pi_id, msg)
-					logging.info('msg:')
-					logging.info(msg)
-					return msg
-				else:
-					time.sleep(0.5)
-			return 'fetch fail'
-		return 'no msg'
-
+		client = PiSocketHandler.get_client(wx_id) 
+		def client_callback(message):
+			logging.info("callback from client %s", message)			
+		if client is not None:
+			yield client.read_message(self, client_callback)
+		#if async or not msgid:
+		#	PiSocketHandler.send_message(wx_id, msg)
+		#	return
+		
 
 	def roll(self, content):
 		temp = content.split(' ')
@@ -172,8 +165,11 @@ class MainHandler(tornado.web.RequestHandler):
 			content = self.env(msg, content)
 
 		elif content == 'photo':
-			url = self.send_message(msg['FromUserName'], content, 'photo_reply')
+			url = self.send_message(msg['FromUserName'], content, 'photo_reply', False, msg['MsgId'])
 			return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'photo', 'this is a photo', url, url)
+
+		elif content == 'video':
+			content = self.video(msg, content)
 
 		elif content.startswith('roll'):
 			content = self.roll(content)
@@ -204,11 +200,11 @@ class MainHandler(tornado.web.RequestHandler):
 		return response
 
 	def image(self, msg, content):
-		self.send_message(msg['FromUserName'], msg['PicUrl'], content + '_reply')
+		self.send_message(msg['FromUserName'], msg['PicUrl'], content + '_reply', False, msg['MsgId'])
 		return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 	def airlist(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply')
+		return self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
 
 	def airbind(self, msg, content):
 		try:
@@ -219,25 +215,42 @@ class MainHandler(tornado.web.RequestHandler):
 			if not term:
 				result = 'term:' + str(index) + ' is not exist'
 			else:
-				result = self.send_message(msg['FromUserName'], 'airbind:' + term, 'airbind_reply')
+				result = self.send_message(msg['FromUserName'], 'airbind:' + term, 'airbind_reply', False, msg['MsgId'])
 		except:
 			logging.error('index is not int', exc_info=True)
 			result = "please input int"
-		logging.info('airbind:result:' + result)
+		# logging.info('airbind:result:' + result)
 		return result
 		
 
 	def env(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply')
+		return self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
 
 	def help(self):
-		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll\nairlist\nenv'
+		return """list获取设备ID列表
+bind+设备ID 绑定设备
+(eg. bind123)
+unbind 设备解绑
+open 开灯
+close 关灯
+photo 远程照片
+roll
+airlist 设备可连接终端列表
+airbind+终端编号
+(eg. airbind1)
+env 环境数据
+直接发送照片"""
+
+	def video(self, msg, content):
+		return self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
 
 	def open(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply')
+		self.send_message(msg['FromUserName'], content, content + '_reply', True)
+		return 'open complete'
 
 	def close(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply')
+		self.send_message(msg['FromUserName'], content, content + '_reply', True)
+		return 'close complete'
 
 	def parse_msg(self):
 		"""
@@ -328,6 +341,11 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 	wx_pi_dict = dict()
 	#cache = []
 	#cache_size = 200
+
+	def __init__(self, application, request, **kwargs):
+		self.read_future = None
+		self.read_queue = collections.deque()
+		tornado.websocket.WebSocketHandler.__init__(self, application, request,**kwargs)
 
 	def allow_draft76(self):
 		# for iOS 5.0 Safari
@@ -423,48 +441,46 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			client.write_message(message)
 		except:
 			logging.error("Error sending message", exc_info=True)
+	
+	@classmethod
+	def get_client(cls, wx_id):
+		logging.info("get_client wx_id=%s", wx_id)
+		pi_id = cache.get("wx:" + wx_id)
+		client = cls.pi_clients.get(pi_id)
+		return client
+
+	def write_message(self, message):
+		try:
+			client.write_message(message)
+		except:
+			logging.error("Error sending message", exc_info=True)
+
+	def read_message(self, callback=None):
+		"""Reads a message from the WebSocket server.
+		Returns a future whose result is the message, or None
+		if the connection is closed.  If a callback argument
+		is given it will be called with the future when it is
+		ready.
+		"""
+		assert self.read_future is None
+		future = TracebackFuture()
+		if self.read_queue:
+			future.set_result(self.read_queue.popleft())
+		else:
+			self.read_future = future
+		if callback is not None:
+			self.io_loop.add_future(future, callback)
+		return future
 
 	def on_message(self, message):
 		pi_id = self.get_argument("pi_id",None)
-		logging.info("got message client pi_id=%s,message=%s", pi_id, message)
+		logging.info("on_message client pi_id=%s,message=%s", pi_id, message)
 
-		if not pi_id:
-			logging.error("Error no pi_id header set")
-			return 
-		
-		elif message == 'hi':
-			self.write_message('welcome')
-			return
-
-		elif not PiSocketHandler.pi_clients.get(pi_id):
-			logging.error("on_message client not regiester")
-			return 
-
-		elif not cache.get('pi:' + pi_id):
-			logging.error("on_message not bind wx")
-			return
-
+		if self.read_future is not None:
+			self.read_future.set_result(message)
+			self.read_future = None
 		else:
-			logging.info('msg:' + message)
-			# if message == 'success' or message == 'failed' or message.startswith('http'):
-			try:
-				jsonmsg = json.loads(message)
-				action = jsonmsg['action']
-				cache.setex("pi_msg:" + pi_id + ':' + action, message, 5)
-				return
-			except:
-				logging.error('message is not json', exc_info=True)
-		
-        #parsed = tornado.escape.json_decode(message)
-        #chat = {
-        #    "id": str(uuid.uuid4()),
-        #    "body": parsed["body"],
-        #    }
-        #chat["html"] = tornado.escape.to_basestring(
-        #    self.render_string("message.html", message=chat))
-
-        #PiSocketHandler.update_cache(chat)
-        #PiSocketHandler.send_updates(chat)
+			self.read_queue.append(message)
 
 class WeiXinBindHandler(tornado.web.RequestHandler):
     def get(self):
