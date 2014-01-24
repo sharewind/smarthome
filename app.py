@@ -502,7 +502,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			try:
 				jsonmsg = json.loads(message)
 				action = jsonmsg['action']
-				cache.setex("pi_msg:" + pi_id + ':' + action, message, 10)
+				cache.setex("pi_msg:" + pi_id + ':' + action, message, 15)
 				return
 			except:
 				logging.error('message is not json', exc_info=True)
