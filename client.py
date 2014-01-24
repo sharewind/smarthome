@@ -5,8 +5,12 @@ import tornado.options
 import tornado.web
 import tornado.websocket
 import os.path
+import commands
 import uuid
+import airplay
 import json
+import datetime
+import time
 from mdns_util import MDNS
 
 from tornado.options import define, options
@@ -130,8 +134,6 @@ def my_on_message(message):
 		logging.info("server respone welcome!")
 		Airplay.list_airplay()
 		return
-	elif "photo" == message:
-		return
 	elif "open" == message:
 		return
 	elif "close" == message:
@@ -139,6 +141,21 @@ def my_on_message(message):
 	elif "bindair" == message:
 		return
 		
+    elif "photo" == message:
+		name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
+		path = '/root/pi/take_photo/' + name + '.jpg'
+		print time.time()
+		status, msg = commands.getstatusoutput('./take.sh ' + 'photo ' + datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S'))
+		if status == 0:
+			# send
+			image = open(path, mode='rb')
+			print time.time()
+			airplay.upload_image(image.read(), sendCallback)
+		else:
+			# send error
+			client.send_message("http://img.itc.cn/photo/oMAER7INJZb")
+	elif message.startswith('http://'):
+		airplay.display_image(message, '10.2.58.240', '7000')
 	else:
 		logging.warn("unregonize message=%s", message)
 		return
@@ -152,6 +169,11 @@ def get_client():
 		client = WebSocketClient(pi_id, url,my_on_message) 
 	return client
 	
+
+def sendCallback(msg):
+	dict = eval(msg)
+	client.send_message(dict['big_url'])
+	print time.time()
 
 def main():
 	tornado.options.parse_command_line()
