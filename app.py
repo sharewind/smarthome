@@ -258,7 +258,7 @@ class MainHandler(tornado.web.RequestHandler):
 		except:
 			logging.error('index is not int', exc_info=True)
 			result = "please input int"
-		logging.info('airbind:result:' + result)
+		# logging.info('airbind:result:' + result)
 		return result
 		
 
