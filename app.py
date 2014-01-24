@@ -215,12 +215,14 @@ class MainHandler(tornado.web.RequestHandler):
 			pi_id = cache.get('wx:' + wx_id)
 			term = cache.lindex('pi:' + pi_id + ':airlist', index - 1)
 			if not term:
-				return 'term:' + index + ' is not exist'
+				result = 'term:' + str(index) + ' is not exist'
 			else:
-				return self.send_message(msg['FromUserName'], 'airbind:' + term)
+				result = self.send_message(msg['FromUserName'], 'airbind:' + term)
 		except:
 			logging.error('index is not int', exc_info=True)
-			return "please input int"
+			result = "please input int"
+		logging.info('airbind:result:' + result)
+		return result
 		
 
 	def env(self, msg, content):
