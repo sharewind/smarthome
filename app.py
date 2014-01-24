@@ -126,7 +126,7 @@ class MainHandler(tornado.web.RequestHandler):
 				msg = cache.get('pi_msg:' + pi_id)
 				if msg:
 					cache.delete('pi_msg:' + pi_id)
-					msg = self.parse_json(msg)
+					msg = str(self.parse_json(msg))
 					logging.info('msg:' + msg)
 					return msg
 				else:
