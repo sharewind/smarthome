@@ -2,13 +2,15 @@
 """
 
 """
-
+from tornado.concurrent import TracebackFuture
 import logging
+import collections
 import tornado.escape
 import tornado.ioloop
 import tornado.options
 import tornado.web
 import tornado.websocket
+import tornado.gen
 import os.path
 import uuid
 import tornado.autoreload
@@ -92,41 +94,67 @@ class MainHandler(tornado.web.RequestHandler):
 		else:
 			self.finish('验证失败')
 
+	@tornado.web.asynchronous
+	@tornado.gen.coroutine
 	def post(self):
 		msg = self.parse_msg()
 		response = None
 		logging.info( msg)
 		#设置返回数据模板	
 		#纯文本格式
-		
-
-
-		#判断Message类型，如果等于"Event"，表明是一个新关注用户
+	        
 		if msg["MsgType"] == "event":
-			response = self.event(msg["Event"], msg)
-			
-
+			response = self.process_event(msg["Event"], msg)
 		elif msg["MsgType"] == "text":
-			response = self.text(msg['Content'].strip(), msg)
-
+			response = yield self.text(msg['Content'].strip(), msg)
 		elif msg["MsgType"] == "image":
 			response = self.image(msg, 'image')
+		else:
+			response = None
+		
+		try:
+			#wx_id = msg['FromUserName']
+			#content = msg['Content'].strip()
+			#response = yield self.send_message(wx_id,content,'xx')
+			logging.info("post_response %s", response)
+			# result = self.send_message(msg['FromUserName'], msg)
+			# logging.info(result)
+			self.finish(response) 
+		except Exception,e:
+			logging.error(e)
+			self.finish("")
+			
+			
 
-		logging.info(response)
-		# result = self.send_message(msg['FromUserName'], msg)
-		# logging.info(result)
-		self.finish(response) 
+	@tornado.gen.coroutine
+	def send_message(self, wx_id, msg, action, async=False, callback=None):
+		logging.info("wx_handler_send_message=%s",msg)
+		if async:
+			PiSocketHandler.send_message(wx_id, msg)
+			raise tornado.gen.Return("receive success")
 
-	def send_message(self, wx_id, msg, action, async=False, msgid=None):
-		PiSocketHandler.send_message(wx_id, msg)
-		client = PiSocketHandler.get_client(wx_id) 
-		def client_callback(message):
-			logging.info("callback from client %s", message)			
-		if client is not None:
-			yield client.read_message(self, client_callback)
-		#if async or not msgid:
-		#	PiSocketHandler.send_message(wx_id, msg)
-		#	return
+		try:
+			client = PiSocketHandler.get_client(wx_id) 
+			if client is None:
+				logging.info("client is None")				
+				raise tornado.gen.Return("no client connected")
+			client.my_write_message(msg)
+			logging.info("client %s", client)
+			logging.info("before read message .............")
+			a = yield tornado.gen.Task(client.read_message)
+			logging.info("xxx%s",a)
+			logging.info("xxx%s",a.result())
+
+			if a.exception() is not None:
+				logging.error("client_error %s", str(a.exception()))
+				result = 'fail, try again'
+			else:
+				pi_id = cache.get('wx:' + wx_id)
+				logging.info(result)
+				result = self.parse_json(wx_id, pi_id, result)
+		except:
+			logging.debug("error occuar ", exc_info=True)
+		raise tornado.gen.Return(a.result())
 		
 
 	def roll(self, content):
@@ -141,7 +169,7 @@ class MainHandler(tornado.web.RequestHandler):
 				content = str(random.randint(int(temp[1]), int(temp[2])))
 		return content
 
-	def event(self, event, msg):
+	def process_event(self, event, msg):
 		if msg["Event"] == "subscribe":
 			# self.bind()
 			help = self.help()
@@ -150,26 +178,29 @@ class MainHandler(tornado.web.RequestHandler):
 			# self.unbind()
 			response = None
 
+	@tornado.gen.coroutine
 	def text(self, content, msg):
+		logging.info("enter text process content=%s msg=%s",content,msg)
 
 		if content == 'list':
 			content = self.pi_id_list()
 
 		elif content =='airlist':
-			content = self.airlist(msg, content)
+			content = yield self.airlist(msg, content)
 
 		elif content.startswith('airbind'):
-			content = self.airbind(msg, content)
+			content = yield self.airbind(msg, content)
 
 		elif content == 'env':
-			content = self.env(msg, content)
+			content = yield self.env(msg, content)
+			logging.info("after env inoke...")
 
 		elif content == 'photo':
-			url = self.send_message(msg['FromUserName'], content, 'photo_reply', False, msg['MsgId'])
-			return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'photo', 'this is a photo', url, url)
+			url = yield self.send_message(msg['FromUserName'], content, 'photo_reply', False, msg['MsgId'])
+			content = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'photo', 'this is a photo', url, url)
 
 		elif content == 'video':
-			content = self.video(msg, content)
+			content = yield self.video(msg, content)
 
 		elif content.startswith('roll'):
 			content = self.roll(content)
@@ -191,21 +222,24 @@ class MainHandler(tornado.web.RequestHandler):
 			logging.info('pi_id:' + pi_id)
 			content = self.bind(msg['FromUserName'], pi_id)
 
-		logging.info("content:")
-		logging.info(content)
+		logging.info("content = %s", content)
 		# result = self.send_message(msg['FromUserName'], msg)
 		# logging.info(result)
 		# content = content
 		response = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
-		return response
+		logging.info("ending process_text ...%s", response)
+		raise tornado.gen.Return(response)
 
 	def image(self, msg, content):
 		self.send_message(msg['FromUserName'], msg['PicUrl'], content + '_reply', False, msg['MsgId'])
 		return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
+	@tornado.gen.coroutine
 	def airlist(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
+		result = yield self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
+		raise tornado.gen.Return(result)
 
+	@tornado.gen.coroutine
 	def airbind(self, msg, content):
 		try:
 			index = int(content[7:])
@@ -215,16 +249,19 @@ class MainHandler(tornado.web.RequestHandler):
 			if not term:
 				result = 'term:' + str(index) + ' is not exist'
 			else:
-				result = self.send_message(msg['FromUserName'], 'airbind:' + term, 'airbind_reply', False, msg['MsgId'])
+				result = yield self.send_message(msg['FromUserName'], 'airbind:' + term, 'airbind_reply', False, msg['MsgId'])
 		except:
 			logging.error('index is not int', exc_info=True)
 			result = "please input int"
-		# logging.info('airbind:result:' + result)
-		return result
-		
+		logging.info('airbind:result:' + result)
+		raise tornado.gen.Return(result)
 
+	@tornado.gen.coroutine
 	def env(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
+		logging.info("enter env process ...")
+		result = yield self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
+		logging.info("after env process reading ...")
+		raise tornado.gen.Return(result)
 
 	def help(self):
 		return """list获取设备ID列表
@@ -241,8 +278,10 @@ airbind+终端编号
 env 环境数据
 直接发送照片"""
 
+	@tornado.gen.coroutine
 	def video(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
+		result = yield self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
+		raise tornado.gen.Return(result)
 
 	def open(self, msg, content):
 		self.send_message(msg['FromUserName'], content, content + '_reply', True)
@@ -345,6 +384,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 	def __init__(self, application, request, **kwargs):
 		self.read_future = None
 		self.read_queue = collections.deque()
+		self.ioloop = tornado.ioloop.IOLoop.instance()
 		tornado.websocket.WebSocketHandler.__init__(self, application, request,**kwargs)
 
 	def allow_draft76(self):
@@ -439,8 +479,8 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 
 		try:
 			client.write_message(message)
-		except:
-			logging.error("Error sending message", exc_info=True)
+		except Exception,e:
+			logging.error("Error sending message %s",str(e))
 	
 	@classmethod
 	def get_client(cls, wx_id):
@@ -449,38 +489,40 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 		client = cls.pi_clients.get(pi_id)
 		return client
 
-	def write_message(self, message):
+	def my_write_message(self, message):
+		logging.info("my_send_message %s", message)
 		try:
-			client.write_message(message)
-		except:
-			logging.error("Error sending message", exc_info=True)
+			self.write_message(message)
+		except Exception,e:
+			logging.error("Error sending message %s",str(e))
 
 	def read_message(self, callback=None):
-		"""Reads a message from the WebSocket server.
-		Returns a future whose result is the message, or None
-		if the connection is closed.  If a callback argument
-		is given it will be called with the future when it is
-		ready.
-		"""
-		assert self.read_future is None
+		logging.info("my_read_message_from_client waitting.....")
+
+		#assert self.read_future is None
 		future = TracebackFuture()
-		if self.read_queue:
-			future.set_result(self.read_queue.popleft())
-		else:
-			self.read_future = future
+		#if self.read_queue:
+		#	future.set_result(self.read_queue.popleft())
+		#else:
+		self.read_future = future
+
+		logging.info("222222my_read_message_from_client waitting.....")
 		if callback is not None:
-			self.io_loop.add_future(future, callback)
+			logging.info("add_callbak on read_message")
+			self.ioloop.add_future(future, callback)
+		logging.info("333333my_read_message_from_client waitting.....")
 		return future
 
 	def on_message(self, message):
 		pi_id = self.get_argument("pi_id",None)
 		logging.info("on_message client pi_id=%s,message=%s", pi_id, message)
-
+		if "hi" == message:
+			return
 		if self.read_future is not None:
 			self.read_future.set_result(message)
 			self.read_future = None
-		else:
-			self.read_queue.append(message)
+		#else:
+			#self.read_queue.append(message)
 
 class WeiXinBindHandler(tornado.web.RequestHandler):
     def get(self):
