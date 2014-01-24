@@ -125,19 +125,19 @@ class MainHandler(tornado.web.RequestHandler):
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
 			if msgid:
-				msgid = cache.get('MsgId:' + msg['MsgId'])
-				if msgid:
-					logging.info('2 MsgId:' + msg['MsgId'])
+				cacheMsgId = cache.get('MsgId:' + msgid)
+				if cacheMsgId:
+					logging.info('2 MsgId:' + cacheMsgId)
 					result = cache.get("pi_msg:" + pi_id + ':' + action)
 					if result:
 						return result
 					else:
-						cache.setex('MsgId:' + msg['MsgId'], msg['MsgId'], 10)
+						cache.setex('MsgId:' + cacheMsgId, cacheMsgId, 10)
 						time.sleep(5)
 						return 'time out'
 				else:
-					logging.info('1 MsgId:' + msg['MsgId'])
-					cache.setex('MsgId:' + msg['MsgId'], msg['MsgId'], 10)
+					logging.info('1 MsgId:' + msgid)
+					cache.setex('MsgId:' + msgid, msgid, 10)
 					PiSocketHandler.send_message(wx_id, msg)
 					time.sleep(5)
 					return 'time out'
