@@ -273,7 +273,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			return 
 		del PiSocketHandler.pi_clients[pi_id]
 		# del PiSocketHandler.pi_wx_dict[pi_id]
-		cache.delete('pi:' + pi_id)
+		# cache.delete('pi:' + pi_id)
 		cache.srem('pi_list', pi_id)
 
 	@classmethod
