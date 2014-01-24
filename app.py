@@ -117,29 +117,30 @@ class MainHandler(tornado.web.RequestHandler):
 		# logging.info(result)
 		self.finish(response) 
 
-	def send_message(self, wx_id, msg, action, async=False):
+	def send_message(self, wx_id, msg, action, async=False, msgid=None):
 		
-		if async:
+		if async or not msgid:
 			PiSocketHandler.send_message(wx_id, msg)
 			return
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
-			msgid = cache.get('MsgId:' + msg['MsgId'])
 			if msgid:
-				logging.info('2 MsgId:' + msg['MsgId'])
-				result = cache.get("pi_msg:" + pi_id + ':' + action)
-				if result:
-					return result
+				msgid = cache.get('MsgId:' + msg['MsgId'])
+				if msgid:
+					logging.info('2 MsgId:' + msg['MsgId'])
+					result = cache.get("pi_msg:" + pi_id + ':' + action)
+					if result:
+						return result
+					else:
+						cache.setex('MsgId:' + msg['MsgId'], msg['MsgId'], 10)
+						time.sleep(5)
+						return 'time out'
 				else:
+					logging.info('1 MsgId:' + msg['MsgId'])
 					cache.setex('MsgId:' + msg['MsgId'], msg['MsgId'], 10)
+					PiSocketHandler.send_message(wx_id, msg)
 					time.sleep(5)
 					return 'time out'
-			else:
-				logging.info('1 MsgId:' + msg['MsgId'])
-				cache.setex('MsgId:' + msg['MsgId'], msg['MsgId'], 10)
-				PiSocketHandler.send_message(wx_id, msg)
-				time.sleep(5)
-				return 'time out'
 		return 'unbind'
 		# pi_id = cache.get('wx:' + wx_id)
 		# if pi_id:
@@ -195,7 +196,7 @@ class MainHandler(tornado.web.RequestHandler):
 			content = self.env(msg, content)
 
 		elif content == 'photo':
-			url = self.send_message(msg['FromUserName'], content, 'photo_reply')
+			url = self.send_message(msg['FromUserName'], content, 'photo_reply', False, msg['MsgId'])
 			return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'photo', 'this is a photo', url, url)
 
 		elif content == 'video':
