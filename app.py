@@ -203,8 +203,11 @@ class MainHandler(tornado.web.RequestHandler):
 			raise tornado.gen.Return(content)
 
 		elif content == 'video':
-			content = yield self.video(msg, content)
-
+			pi_id = cache.get('wx:' + wx_id)
+			if pi_id is None:
+				content = "设备未连接"
+			else:
+				content = "监控地址(请点击) http://www.go123.us/monitor/stream-example.html?id=" + str(pi_id); 
 		elif content.startswith('roll'):
 			content = self.roll(content)
 
@@ -274,7 +277,7 @@ unbind 设备解绑
 open 开灯
 close 关灯
 photo 远程照片
-roll
+video 返回视频监控地址
 airlist 设备可连接终端列表
 airbind+终端编号
 (eg. airbind1)
