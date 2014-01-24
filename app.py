@@ -117,8 +117,10 @@ class MainHandler(tornado.web.RequestHandler):
 		# logging.info(result)
 		self.finish(response) 
 
-	def send_message(self, wx_id, msg, action):
+	def send_message(self, wx_id, msg, action, async=False):
 		PiSocketHandler.send_message(wx_id, msg)
+		if async:
+			return
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
 			for i in range(0, 10):
@@ -244,11 +246,11 @@ env环境数据
 直接发送照片"""
 
 	def open(self, msg, content):
-		self.send_message(msg['FromUserName'], content, content + '_reply')
+		self.send_message(msg['FromUserName'], content, content + '_reply', True)
 		return 'open complete'
 
 	def close(self, msg, content):
-		self.send_message(msg['FromUserName'], content, content + '_reply')
+		self.send_message(msg['FromUserName'], content, content + '_reply', True)
 		return 'close complete'
 
 	def parse_msg(self):
