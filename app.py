@@ -165,6 +165,9 @@ class MainHandler(tornado.web.RequestHandler):
 		elif content == 'bindair':
 			content == self.bindair(msg, content)
 
+		elif content == 'env':
+			content ==self.bindair(msg, content)
+
 		elif content == 'photo':
 			url = self.send_message(msg['FromUserName'], content)
 			return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'photo', 'this is a photo', url, url)
@@ -204,6 +207,9 @@ class MainHandler(tornado.web.RequestHandler):
 		return self.send_message(msg['FromUserName'], content)
 
 	def bindair(self, msg, content):
+		return self.send_message(msg['FromUserName'], content)
+
+	def env(self, msg, content):
 		return self.send_message(msg['FromUserName'], content)
 
 	def help(self):
