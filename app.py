@@ -137,6 +137,7 @@ class MainHandler(tornado.web.RequestHandler):
 					else:
 						cache.setex('MsgId:' + cacheMsgId, cacheMsgId, 15)
 						self.set_status(500)
+						return
 						# time.sleep(5)
 						# return 'time out'
 				else:
@@ -144,6 +145,7 @@ class MainHandler(tornado.web.RequestHandler):
 					cache.setex('MsgId:' + msgid, msgid, 15)
 					PiSocketHandler.send_message(wx_id, msg)
 					self.set_status(500)
+					return
 					# time.sleep(5)
 					# return 'time out'
 		return 'unbind'
