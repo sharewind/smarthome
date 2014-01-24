@@ -130,6 +130,8 @@ class MainHandler(tornado.web.RequestHandler):
 					logging.info('2 MsgId:' + cacheMsgId)
 					result = cache.get("pi_msg:" + pi_id + ':' + action)
 					if result:
+						logging.info('result:')
+						logging.info(result)
 						result = self.parse_json(wx_id, pi_id, result)
 						return result
 					else:
