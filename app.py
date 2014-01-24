@@ -287,9 +287,6 @@ class MainHandler(tornado.web.RequestHandler):
 			elif 'image_reply' == jsonmsg['action']:
 				return jsonmsg['data']
 
-			elif 'photo_reply' == jsonmsg['action']:
-				return jsonmsg['data']
-
 		else:
 			return 'failed'
 			
