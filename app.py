@@ -203,6 +203,7 @@ class MainHandler(tornado.web.RequestHandler):
 			raise tornado.gen.Return(content)
 
 		elif content == 'video':
+			wx_id = msg['FromUserName']
 			pi_id = cache.get('wx:' + wx_id)
 			if pi_id is None:
 				content = "设备未连接"
