@@ -239,11 +239,11 @@ class MainHandler(tornado.web.RequestHandler):
 		return response
 
 	def image(self, msg, content):
-		self.send_message(msg['FromUserName'], msg['PicUrl'], content + '_reply')
+		self.send_message(msg['FromUserName'], msg['PicUrl'], content + '_reply', False, msg['MsgId'])
 		return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 	def airlist(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply')
+		return self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
 
 	def airbind(self, msg, content):
 		try:
@@ -254,7 +254,7 @@ class MainHandler(tornado.web.RequestHandler):
 			if not term:
 				result = 'term:' + str(index) + ' is not exist'
 			else:
-				result = self.send_message(msg['FromUserName'], 'airbind:' + term, 'airbind_reply')
+				result = self.send_message(msg['FromUserName'], 'airbind:' + term, 'airbind_reply', False, msg['MsgId'])
 		except:
 			logging.error('index is not int', exc_info=True)
 			result = "please input int"
@@ -263,7 +263,7 @@ class MainHandler(tornado.web.RequestHandler):
 		
 
 	def env(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply')
+		return self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
 
 	def help(self):
 		return """list获取设备ID列表
@@ -281,7 +281,7 @@ env 环境数据
 直接发送照片"""
 
 	def video(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply')
+		return self.send_message(msg['FromUserName'], content, content + '_reply', False, msg['MsgId'])
 
 	def open(self, msg, content):
 		self.send_message(msg['FromUserName'], content, content + '_reply', True)
