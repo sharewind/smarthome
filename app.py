@@ -126,7 +126,7 @@ class MainHandler(tornado.web.RequestHandler):
 				msg = cache.get('pi_msg:' + pi_id)
 				if msg:
 					cache.delete('pi_msg:' + pi_id)
-					msg = self.parse_json(msg)
+					msg = str(self.parse_json(msg))
 					logging.info('msg:' + msg)
 					return msg
 				else:
@@ -250,22 +250,22 @@ class MainHandler(tornado.web.RequestHandler):
 				return jsonmsg['data']['big_url']
 
 			elif 'open_reply' == jsonmsg['action']:
-				return
+				return jsonmsg['data']
 
 			elif 'close_reply' == jsonmsg['action']:
-				return
+				return jsonmsg['data']
 
 			elif 'env_reply' == jsonmsg['action']:
-				return
+				return jsonmsg['data']
 
 			elif 'airlist_reply' == jsonmsg['action']:
-				return
+				return jsonmsg['data']
 
 			elif 'image_reply' == jsonmsg['action']:
-				return
+				return jsonmsg['data']
 
 			elif 'photo_reply' == jsonmsg['action']:
-				return
+				return jsonmsg['data']
 
 		else:
 			return 'failed'
