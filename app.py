@@ -118,25 +118,43 @@ class MainHandler(tornado.web.RequestHandler):
 		self.finish(response) 
 
 	def send_message(self, wx_id, msg, action, async=False):
-		PiSocketHandler.send_message(wx_id, msg)
+		
 		if async:
+			PiSocketHandler.send_message(wx_id, msg)
 			return
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
-			for i in range(0, 5000):
-				if i % 1000 == 0:
-					logging.info(i)
+			msgid = cache.get('MsgId:' + msg['MsgId'])
+			if msgid:
 				msg = cache.get("pi_msg:" + pi_id + ':' + action)
 				if msg:
-					cache.delete("pi_msg:" + pi_id + ':' + action)
-					msg = self.parse_json(wx_id, pi_id, msg)
-					logging.info('msg:')
-					logging.info(msg)
 					return msg
 				else:
-					time.sleep(0.001)
-			return 'fetch fail'
-		return 'no msg'
+					cache.setex('MsgId:' + msg['MsgId'], msg['MsgId'], 10)
+					time.sleep(5)
+					return 'time out'
+			else:
+				cache.setex('MsgId:' + msg['MsgId'], msg['MsgId'], 10)
+				PiSocketHandler.send_message(wx_id, msg)
+				time.sleep(5)
+				return 'time out'
+		return 'unbind'
+		# pi_id = cache.get('wx:' + wx_id)
+		# if pi_id:
+		# 	for i in range(0, 5000):
+		# 		if i % 1000 == 0:
+		# 			logging.info(i)
+		# 		msg = cache.get("pi_msg:" + pi_id + ':' + action)
+		# 		if msg:
+		# 			cache.delete("pi_msg:" + pi_id + ':' + action)
+		# 			msg = self.parse_json(wx_id, pi_id, msg)
+		# 			logging.info('msg:')
+		# 			logging.info(msg)
+		# 			return msg
+		# 		else:
+		# 			time.sleep(0.001)
+		# 	return 'fetch fail'
+		# return 'no msg'
 
 
 	def roll(self, content):
@@ -473,7 +491,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			try:
 				jsonmsg = json.loads(message)
 				action = jsonmsg['action']
-				cache.setex("pi_msg:" + pi_id + ':' + action, message, 5)
+				cache.setex("pi_msg:" + pi_id + ':' + action, message, 10)
 				return
 			except:
 				logging.error('message is not json', exc_info=True)
