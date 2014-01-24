@@ -379,7 +379,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			logging.error("on_message not bind wx")
 			return
 		logging.info('msg:' + message)
-		if message == 'success' or message == 'failed' or message
+		if message == 'success' or message == 'failed' or message.startswith('http'):
 			cache.set("pi_msg:" + pi_id, message)
 		elif message == 'hi':
 			self.write_message('welcome')
