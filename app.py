@@ -131,7 +131,7 @@ class MainHandler(tornado.web.RequestHandler):
 				if result:
 					return result
 				else:
-					cache.setex('MsgId:' + str(msg['MsgId'])], str(msg['MsgId']), 10)
+					cache.setex('MsgId:' + str(msg['MsgId']), str(msg['MsgId']), 10)
 					time.sleep(5)
 					return 'time out'
 			else:
