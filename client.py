@@ -169,7 +169,7 @@ def my_on_message(message):
 
 	try:
 		if "welcome" == message:
-			Airplay.list_airplay()
+			#Airplay.list_airplay()
 			logging.info("server respone welcome!")
 			return
 
@@ -189,6 +189,7 @@ def my_on_message(message):
 			    target = json.loads(message[8:])
 			    airplay_host = target["ip"]
 			    airplay_port = target["port"] 
+			    logging.info('airbind=host:port %s:%s', airplay_host, airplay_port)
 			    response = {'status':True, 'code':0, 'action':'airbind_reply','data':'airbind on ' + target['servicename']+ ' success'}
 			    client.send_message(json.dumps(response))
 			except Exception,e:
@@ -208,7 +209,10 @@ def my_on_message(message):
 
 		#take photo
 		elif message.startswith('http://'):
-			airplay.display_image(message, airplay_host, airplay_port)
+			logging.info('display image url=%s on host:port_%s:%s_', message, airplay_host, airplay_port)
+			airplay.display_image(message, str(airplay_host), str(airplay_port))
+			response = {'status':True, 'code':0, 'action':'image_reply','data':'success'}
+			client.send_message(json.dumps(response))
 
 		#send temperature humidity
 		elif "env" == message:

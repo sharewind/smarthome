@@ -74,7 +74,7 @@ def display_image(url, host, port, callback=None):
 	logging.info("display image=%s, on %s:%s", url, host, port)
 	def on_fetch(image):
 		send_image_by_airplay(host, port, image)
-		upload_image(image)
+		#upload_image(image)
 	fetch_image(url, on_fetch)
 
 def upload_image(image, callback=None):
@@ -97,7 +97,8 @@ def upload_image(image, callback=None):
 def main():
 	tornado.options.parse_command_line()
 	
-	url = "http://img.itc.cn/photo/oMAER7INJZb"
+	#url = "http://img.itc.cn/photo/oMAER7INJZb"
+	url = "http://mmbiz.qpic.cn/mmbiz/RJib8PKM3xaGcbrMueOpEPL6O7F414G7YBVhx6w6pcGCnhmFjichiajk9uQ2sTZeuMZF7QuDicfzZQxKibMKl5Yia7dA/0"
 	display_image(url, '10.2.58.240', '7000')
 	tornado.ioloop.IOLoop.instance().start()
 	
