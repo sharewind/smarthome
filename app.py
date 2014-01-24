@@ -124,7 +124,8 @@ class MainHandler(tornado.web.RequestHandler):
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
 			for i in range(0, 5000):
-				logging.info(i)
+				if i % 1000 == 0:
+					logging.info(i)
 				msg = cache.get("pi_msg:" + pi_id + ':' + action)
 				if msg:
 					cache.delete("pi_msg:" + pi_id + ':' + action)
