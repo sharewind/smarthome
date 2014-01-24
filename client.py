@@ -12,6 +12,7 @@ import json
 import datetime
 import time
 import redis
+import sys
 from mdns_util import MDNS
 
 from tornado.options import define, options
@@ -145,9 +146,14 @@ def my_on_message(message):
 	elif "close" == message:
 		return
 
-	elif "bindair" == message:
+	elif 'env' == message:
+		return
+
+	elif message.startswith('bindair'):
+		id = message[7:]
 		return
 		
+	#send photo
 	elif "photo" == message:
 		name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
 		path = '/root/pi/take_photo/' + name + '.jpg'
@@ -162,6 +168,7 @@ def my_on_message(message):
 			# send error
 			client.send_message("http://img.itc.cn/photo/oMAER7INJZb")
 
+	#take photo
 	elif message.startswith('http://'):
 		airplay.display_image(message, '10.2.58.240', '7000')
 	elif "env" == message:
@@ -177,10 +184,11 @@ def my_on_message(message):
 		return
 
 client = None
-def get_client():
+def get_client(pi_id):
 	global client
 	if client is None:
-		pi_id = 113696732
+		if pi_id is None:
+			pi_id = 113696732
 		url = "ws://go123.us/smartsocket?pi_id=" + str(pi_id)
 		client = WebSocketClient(pi_id, url,my_on_message) 
 	return client
@@ -196,7 +204,7 @@ def main():
 	app = Application()
 	app.listen(options.port)
 
-	get_client()
+	get_client(sys.argv[1])
 	tornado.ioloop.IOLoop.instance().start()
 
 
