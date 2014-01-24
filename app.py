@@ -129,6 +129,7 @@ class MainHandler(tornado.web.RequestHandler):
 	@tornado.gen.coroutine
 	def send_message(self, wx_id, msg, action, async=False, callback=None):
 		logging.info("wx_handler_send_message=%s",msg)
+		result = None
 		if async:
 			PiSocketHandler.send_message(wx_id, msg)
 			raise tornado.gen.Return("receive success")
@@ -141,20 +142,21 @@ class MainHandler(tornado.web.RequestHandler):
 			client.my_write_message(msg)
 			logging.info("client %s", client)
 			logging.info("before read message .............")
-			a = yield tornado.gen.Task(client.read_message)
-			logging.info("xxx%s",a)
-			logging.info("xxx%s",a.result())
+			client_res = yield tornado.gen.Task(client.read_message)
+			logging.info("xxx%s",client_res)
+			logging.info("xxx%s",client_res.result())
 
-			if a.exception() is not None:
-				logging.error("client_error %s", str(a.exception()))
+			if client_res.exception() is not None:
+				logging.error("client_error %s", str(client_res.exception()))
 				result = 'fail, try again'
 			else:
+				jsonstr = client_res.result()
 				pi_id = cache.get('wx:' + wx_id)
-				logging.info(result)
-				result = self.parse_json(wx_id, pi_id, result)
+				logging.info(jsonstr)
+				result = self.parse_json(wx_id, pi_id, jsonstr)
 		except:
 			logging.debug("error occuar ", exc_info=True)
-		raise tornado.gen.Return(a.result())
+		raise tornado.gen.Return(result)
 		
 
 	def roll(self, content):
@@ -198,6 +200,7 @@ class MainHandler(tornado.web.RequestHandler):
 		elif content == 'photo':
 			url = yield self.send_message(msg['FromUserName'], content, 'photo_reply', False, msg['MsgId'])
 			content = pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'photo', 'this is a photo', url, url)
+			raise tornado.gen.Return(content)
 
 		elif content == 'video':
 			content = yield self.video(msg, content)
