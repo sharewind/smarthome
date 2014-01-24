@@ -123,7 +123,7 @@ class MainHandler(tornado.web.RequestHandler):
 			return
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
-			for i in range(0, 1000):
+			for i in range(0, 5000):
 				logging.info(i)
 				msg = cache.get("pi_msg:" + pi_id + ':' + action)
 				if msg:
