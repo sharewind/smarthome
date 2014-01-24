@@ -195,7 +195,8 @@ class MainHandler(tornado.web.RequestHandler):
 			logging.info('pi_id:' + pi_id)
 			content = self.bind(msg['FromUserName'], pi_id)
 
-		logging.info("content:" + content)
+		logging.info("content:")
+		logging.info(content)
 		# result = self.send_message(msg['FromUserName'], msg)
 		# logging.info(result)
 		# content = content
@@ -218,6 +219,7 @@ class MainHandler(tornado.web.RequestHandler):
 			if not term:
 				result = 'term:' + str(index) + ' is not exist'
 			else:
+				term = json.dumps(term)
 				result = self.send_message(msg['FromUserName'], 'airbind:' + term)
 		except:
 			logging.error('index is not int', exc_info=True)
@@ -267,8 +269,8 @@ class MainHandler(tornado.web.RequestHandler):
 			elif 'env_reply' == jsonmsg['action']:
 				temperature = jsonmsg['data'][0]['temperature']
 				humidity = jsonmsg['data'][0]['humidity']
-				content = '温度：' + str(temperature) + '\n' + '湿度：' + str(humidity) + '%'
-				return 
+				content = '温度：' + str(temperature) + '°C\n' + '湿度：' + str(humidity) + '%'
+				return content
 
 			elif 'airlist_reply' == jsonmsg['action']:
 				cache.delete('pi:' + pi_id + ':airlist')
@@ -449,7 +451,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			# if message == 'success' or message == 'failed' or message.startswith('http'):
 			try:
 				jsonmsg = json.loads(message)
-				cache.set("pi_msg:" + pi_id, message)
+				cache.setex("pi_msg:" + pi_id, message, 5)
 				return
 			except:
 				logging.error('message is not json', exc_info=True)
