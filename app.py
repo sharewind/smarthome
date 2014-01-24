@@ -244,10 +244,12 @@ env环境数据
 直接发送照片"""
 
 	def open(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply')
+		self.send_message(msg['FromUserName'], content, content + '_reply')
+		return 'open complete'
 
 	def close(self, msg, content):
-		return self.send_message(msg['FromUserName'], content, content + '_reply')
+		self.send_message(msg['FromUserName'], content, content + '_reply')
+		return 'close complete'
 
 	def parse_msg(self):
 		"""
