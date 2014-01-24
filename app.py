@@ -123,7 +123,7 @@ class MainHandler(tornado.web.RequestHandler):
 			return
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
-			for i in range(0, 10):
+			for i in range(0, 1000):
 				logging.info(i)
 				msg = cache.get("pi_msg:" + pi_id + ':' + action)
 				if msg:
@@ -133,7 +133,7 @@ class MainHandler(tornado.web.RequestHandler):
 					logging.info(msg)
 					return msg
 				else:
-					time.sleep(0.5)
+					time.sleep(0.001)
 			return 'fetch fail'
 		return 'no msg'
 
@@ -176,6 +176,9 @@ class MainHandler(tornado.web.RequestHandler):
 		elif content == 'photo':
 			url = self.send_message(msg['FromUserName'], content, 'photo_reply')
 			return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'photo', 'this is a photo', url, url)
+
+		elif content == 'video':
+			content = self.video(msg, content)
 
 		elif content.startswith('roll'):
 			content = self.roll(content)
@@ -234,18 +237,21 @@ class MainHandler(tornado.web.RequestHandler):
 
 	def help(self):
 		return """list获取设备ID列表
-bind+设备ID绑定设备
+bind+设备ID 绑定设备
 (eg. bind123)
-unbind设备解绑
-open开灯
-close关灯
-photo取照片
+unbind 设备解绑
+open 开灯
+close 关灯
+photo 远程照片
 roll
-airlist设备可连接终端列表
+airlist 设备可连接终端列表
 airbind+终端编号
 (eg. airbind1)
-env环境数据
+env 环境数据
 直接发送照片"""
+
+	def video(self, msg, content):
+		return self.send_message(msg['FromUserName'], content, content + '_reply')
 
 	def open(self, msg, content):
 		self.send_message(msg['FromUserName'], content, content + '_reply', True)
