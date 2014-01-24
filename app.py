@@ -253,7 +253,10 @@ class MainHandler(tornado.web.RequestHandler):
 				return jsonmsg['data']
 
 			elif 'airlist_reply' == jsonmsg['action']:
-				return jsonmsg['data']
+				airlist = ''
+				for data in jsonmsg['data']:
+					airlist = airlist + data['index'] + ':' + data['ip'] + ':' + data['port'] + '\n'
+				return airlist
 
 			elif 'image_reply' == jsonmsg['action']:
 				return jsonmsg['data']
