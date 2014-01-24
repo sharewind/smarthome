@@ -17,6 +17,7 @@ Stuffix="-树莓派@相册组"
 Title="$1$Stuffix"
 Name="/root/pi/take_photo/$2.jpg"
 
-fswebcam -d /dev/video0 -r 640x320 --bottom-banner --title $Title --save $Name
+#fswebcam -d /dev/video0 -r 640x320 --bottom-banner --title $Title --save $Name
+raspistill -n -w 480 -h 640 -t 5 -o $Name
 
 exit 0
