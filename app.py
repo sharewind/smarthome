@@ -126,7 +126,7 @@ class MainHandler(tornado.web.RequestHandler):
 				msg = cache.get('pi_msg:' + pi_id)
 				if msg:
 					cache.delete('pi_msg:' + pi_id)
-					msg = str(self.parse_json(msg))
+					msg = self.parse_json(msg)
 					logging.info('msg:' + msg)
 					return msg
 				else:
@@ -238,7 +238,7 @@ class MainHandler(tornado.web.RequestHandler):
 		return msg
 
 	def parse_json(self, msg):
-		jsonmsg = json .loads(msg)
+		jsonmsg = json.loads(msg)
 		if jsonmsg['status']:
 			if 'photo_reply' == jsonmsg['action']:
 				return jsonmsg['data']['big_url']
