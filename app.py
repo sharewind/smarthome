@@ -165,7 +165,7 @@ class MainHandler(tornado.web.RequestHandler):
 			content = self.airlist(msg, content)
 
 		elif content.startswith('airbind'):
-			content == self.airbind(msg, content)
+			content = self.airbind(msg, content)
 
 		elif content == 'env':
 			content = self.env(msg, content)
