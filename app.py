@@ -219,7 +219,6 @@ class MainHandler(tornado.web.RequestHandler):
 			if not term:
 				result = 'term:' + str(index) + ' is not exist'
 			else:
-				term = json.dumps(term)
 				result = self.send_message(msg['FromUserName'], 'airbind:' + term)
 		except:
 			logging.error('index is not int', exc_info=True)
@@ -278,7 +277,7 @@ class MainHandler(tornado.web.RequestHandler):
 				for data in jsonmsg['data']:
 					one = str(data['index']) + ':' + data['servicename'] + ':' + data['ip'] + ':' + str(data['port'])
 					airlist = airlist + one + '\n'
-					cache.rpush('pi:' + pi_id + ':airlist',data)
+					cache.rpush('pi:' + pi_id + ':airlist', json.dumps(data))
 				return airlist
 
 			elif 'airbind_reply' == jsonmsg['action']:
