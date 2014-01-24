@@ -166,7 +166,7 @@ class MainHandler(tornado.web.RequestHandler):
 			content == self.bindair(msg, content)
 
 		elif content == 'env':
-			content ==self.bindair(msg, content)
+			content ==self.env(msg, content)
 
 		elif content == 'photo':
 			url = self.send_message(msg['FromUserName'], content)
@@ -213,7 +213,7 @@ class MainHandler(tornado.web.RequestHandler):
 		return self.send_message(msg['FromUserName'], content)
 
 	def help(self):
-		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll\nairlist'
+		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll\nairlist\nenv'
 
 	def open(self, msg):
 		result = self.send_message(msg['FromUserName'], 'open')
@@ -240,6 +240,9 @@ class MainHandler(tornado.web.RequestHandler):
 			logging.info( child)
 			msg[child.tag] = child.text
 		return msg
+
+	def parse_json(self, json):
+		return
 
 	def bind(self, wxid, piid):
 		
@@ -319,6 +322,8 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			return False, '设备' + pi_id + '已被绑定'
 		# if cls.wx_pi_dict.get(wx_id):
 		elif cache.get('wx:' + wx_id):
+			pi_id = cache.get('wx:' + wx_id)
+			cache.delete('pi:' + pi_id)
 			logging.info("bind wx_id repeat! wx_id=%s, pi_id=%s", wx_id, pi_id)
 			msg = '微信重新绑定' + pi_id
 		else:
@@ -386,6 +391,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			logging.error("on_message not bind wx")
 			return
 		logging.info('msg:' + message)
+		# json.loads(j)
 		if message == 'success' or message == 'failed' or message.startswith('http'):
 			cache.set("pi_msg:" + pi_id, message)
 		elif message == 'hi':
@@ -422,6 +428,7 @@ def main():
     app = Application()
     app.listen(options.port)
     tornado.autoreload.start(io_loop=None, check_time=500)
+    logging.info("start app....")
     tornado.ioloop.IOLoop.instance().start()
 
 

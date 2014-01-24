@@ -167,9 +167,6 @@ def my_on_message(message):
 	elif "close" == message:
 		return
 
-	elif 'env' == message:
-		return
-
 	elif message.startswith('bindair'):
 		id = message[7:]
 		return
@@ -178,28 +175,32 @@ def my_on_message(message):
 	elif "photo" == message:
 		name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
 		path = '/root/pi/take_photo/' + name + '.jpg'
-		print time.time()
 		status, msg = commands.getstatusoutput('./take.sh ' + 'photo ' + datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S'))
-		if status == 0:
-			# send
-			image = open(path, mode='rb')
-			print time.time()
-			airplay.upload_image(image.read(), sendCallback)
-		else:
-			# send error
-			client.send_message("http://img.itc.cn/photo/oMAER7INJZb")
+		# send
+		image = open(path, mode='rb')
+		airplay.upload_image(image.read(), sendCallback)
 
 	#take photo
 	elif message.startswith('http://'):
 		airplay.display_image(message, '10.2.58.240', '7000')
+
+	#send temperature humidity
 	elif "env" == message:
 		r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
 		t = r.get('temperature')
 		h = r.get('humidity')
 		ret = {}
-		ret['temperature'] = t
-		ret['humidity'] = h
+		ret['status'] = True
+		ret['action'] = "env_reply"
+		ret['code'] = 0
+		data = []
+		data1 = {}
+		data1['temperature'] = t
+		data1['humidity'] = h
+		data.append(data1)
+		ret['data'] = data
 		client.send_message(json.dumps(ret))
+
 	else:
 		logging.warn("unregonize message=%s", message)
 		return
@@ -220,8 +221,17 @@ def get_client(pi_id):
 
 def sendCallback(msg):
 	dict = eval(msg)
-	client.send_message(dict['big_url'])
-	print time.time()
+        ret = {
+        	'status':True,
+		'code':0,
+        	'action': "photo_reply"
+	}
+        data = []
+        data1 = {}
+        data1['big_url'] = dict['big_url']
+        data.append(data1)
+	ret['data'] = data
+	client.send_message(json.dumps(ret))
 
 def main():
 	tornado.options.parse_command_line()
