@@ -131,7 +131,7 @@ class Airplay(object):
 	
 		regtype = '_airplay._tcp'
 		cls.mdns.discover(regtype, on_discovered, on_lost)
-		cls.ioloop.add_timeout(cls.ioloop.time() + 3, cls.end_discover)
+		cls.ioloop.add_timeout(cls.ioloop.time() + 1, cls.end_discover)
 
 	@classmethod
 	def end_discover(cls):

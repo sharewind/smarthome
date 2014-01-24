@@ -52,7 +52,7 @@ def send_image_by_airplay(host, port, image):
 		else:
 			logging.info("airplay send over %s",response)
 			ioloop = tornado.ioloop.IOLoop.instance()
-			ioloop.add_timeout(ioloop.time() + 5, stop_airplay)
+			ioloop.add_timeout(ioloop.time() + 10, stop_airplay)
 
 	def on_send_display():
 		headers = {
