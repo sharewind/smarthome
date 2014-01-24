@@ -255,7 +255,7 @@ class MainHandler(tornado.web.RequestHandler):
 		jsonmsg = json.loads(msg)
 		if jsonmsg['status']:
 			if 'photo_reply' == jsonmsg['action']:
-				return jsonmsg['data']['big_url']
+				return jsonmsg['data'][0]['big_url']
 
 			elif 'open_reply' == jsonmsg['action']:
 				return jsonmsg['data']
@@ -264,8 +264,8 @@ class MainHandler(tornado.web.RequestHandler):
 				return jsonmsg['data']
 
 			elif 'env_reply' == jsonmsg['action']:
-				temperature = jsonmsg['data']['temperature']
-				humidity = jsonmsg['data']['humidity']
+				temperature = jsonmsg['data'][0]['temperature']
+				humidity = jsonmsg['data'][0]['humidity']
 				content = '温度：' + str(temperature) + '\n' + '湿度：' + str(humidity) + '%'
 				return 
 
