@@ -92,18 +92,28 @@ class WebSocketClient:
 		except Exception,e:
 			logging.error("send message error=%s",e)
 
+
 class Airplay(object):
 	ioloop = tornado.ioloop.IOLoop.instance()
 	mdns = MDNS(ioloop)
 	#mdns.register('My HTTP Service', '_http._tcp', 8080)
 	server_list = set()
+	is_airplay = False
 
 	@classmethod
 	def list_airplay(cls):
+		if cls.is_airplay == True:
+		    return 
+		else:
+		    cls.is_airplay = True
+
 		logging.info("airplay start discover")
 		cls.server_list = {} 
 		def on_discovered(index, servicename, fullname, host, port, txtRecord):
 			try:
+				if isinstance(servicename, unicode):
+					servicename = servicename.encode('utf-8')
+					logging.info(servicename)
 				ip = socket.gethostbyname(host)
 			except Exception,e:
 				pass
@@ -146,64 +156,82 @@ class Airplay(object):
 			message = json.dumps(response)
 			client.send_message(message)
 			cls.server_list = {}
+			cls.is_airplay = False
 		except Exception,e:
 			logging.error("airplay end_discovery error %s", e)
 
 
 def my_on_message(message):
 	logging.info("on message processing .....")
-	if "welcome" == message:
-		Airplay.list_airplay()
-		logging.info("server respone welcome!")
-		return
 
-	elif 'airlist' == message:
-		Airplay.list_airplay()
-		return
+	global airplay_host
+	global airplay_port
 
-	elif "open" == message:
-		return
+	try:
+		if "welcome" == message:
+			Airplay.list_airplay()
+			logging.info("server respone welcome!")
+			return
 
-	elif "close" == message:
-		return
+		elif 'airlist' == message:
+			Airplay.list_airplay()
+			return
 
-	elif message.startswith('bindair'):
-		id = message[7:]
-		return
-		
-	#send photo
-	elif "photo" == message:
-		name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
-		path = '/root/pi/take_photo/' + name + '.jpg'
-		status, msg = commands.getstatusoutput('./take.sh ' + 'photo ' + datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S'))
-		# send
-		image = open(path, mode='rb')
-		airplay.upload_image(image.read(), sendCallback)
+		elif "open" == message:
+			return
 
-	#take photo
-	elif message.startswith('http://'):
-		airplay.display_image(message, '10.2.58.240', '7000')
+		elif "close" == message:
+			return
 
-	#send temperature humidity
-	elif "env" == message:
-		r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
-		t = r.get('temperature')
-		h = r.get('humidity')
-		ret = {}
-		ret['status'] = True
-		ret['action'] = "env_reply"
-		ret['code'] = 0
-		data = []
-		data1 = {}
-		data1['temperature'] = t
-		data1['humidity'] = h
-		data.append(data1)
-		ret['data'] = data
-		client.send_message(json.dumps(ret))
+		elif message.startswith('airbind'):
+			logging.info("%s",message[8:])
+			try:
+			    target = json.loads(message[8:])
+			    airplay_host = target["ip"]
+			    airplay_port = target["port"] 
+			    response = {'status':True, 'code':0, 'action':'airbind_reply','desc':'airbind on ' + target['servicename']+ ' success'}
+			    client.send_message(json.dumps(response))
+			except Exception,e:
+				logging.error("airbind error %s",e)
+				response = {'status':False, 'code':-1, 'action':'airbind_reply','desc':'airbind on error:' + str(e)}
+				client.send_message(json.dumps(response))
+			return
+			
+		#send photo
+		elif "photo" == message:
+			name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
+			path = '/root/pi/take_photo/' + name + '.jpg'
+			status, msg = commands.getstatusoutput('./take.sh ' + 'photo ' + datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S'))
+			# send
+			image = open(path, mode='rb')
+			airplay.upload_image(image.read(), sendCallback)
 
-	else:
-		logging.warn("unregonize message=%s", message)
-		return
+		#take photo
+		elif message.startswith('http://'):
+			airplay.display_image(message, airplay_host, airplay_port)
+
+		#send temperature humidity
+		elif "env" == message:
+			r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
+			t = r.get('temperature')
+			h = r.get('humidity')
+			ret = {}
+			ret['status'] = True
+			ret['action'] = "env_reply"
+			ret['code'] = 0
+			data = []
+			data1 = {}
+			data1['temperature'] = t
+			data1['humidity'] = h
+			data.append(data1)
+			ret['data'] = data
+			client.send_message(json.dumps(ret))
+
+		else:
+			logging.warn("unregonize message=%s", message)
+			return
+	except Exception,e:
+		logging.error("process message error %s",e)
 
 client = None
 airplay_host = None
