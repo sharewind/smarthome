@@ -11,6 +11,7 @@ import airplay
 import json
 import datetime
 import time
+import redis
 import sys
 from mdns_util import MDNS
 
@@ -170,7 +171,14 @@ def my_on_message(message):
 	#take photo
 	elif message.startswith('http://'):
 		airplay.display_image(message, '10.2.58.240', '7000')
-
+	elif "env" == message:
+		r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
+		t = r.get('temperature')
+		h = r.get('humidity')
+		ret = {}
+		ret['temperature'] = t
+		ret['humidity'] = h
+		client.send_message(json.dumps(ret))
 	else:
 		logging.warn("unregonize message=%s", message)
 		return
