@@ -130,10 +130,15 @@ def my_on_message(message):
 		logging.info("server respone welcome!")
 		Airplay.list_airplay()
 		return
-	elif "airplay_list" == message:
-		Airplay.list_airplay()
-		#client.send_message("my airplay server")
+	elif "photo" == message:
 		return
+	elif "open" == message:
+		return
+	elif "close" == message:
+		return
+	elif "bindair" == message:
+		return
+		
 	else:
 		logging.warn("unregonize message=%s", message)
 		return

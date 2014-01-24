@@ -159,6 +159,9 @@ class MainHandler(tornado.web.RequestHandler):
 		if content == 'list':
 			content = self.pi_id_list()
 
+		elif content =='airlist':
+			content = self.airlist(msg,content)
+
 		elif content == 'photo':
 			url = self.send_message(msg['FromUserName'], content)
 			return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'photo', 'this is a photo', url, url)
@@ -168,6 +171,9 @@ class MainHandler(tornado.web.RequestHandler):
 
 		elif content == 'open':
 			content = self.open(msg)
+
+		elif content == 'close':
+			content = self.close(msg)
 
 		elif content == 'help':
 			content = self.help()
@@ -183,7 +189,7 @@ class MainHandler(tornado.web.RequestHandler):
 		logging.info(content)
 		# result = self.send_message(msg['FromUserName'], msg)
 		# logging.info(result)
-		content = content
+		# content = content
 		response = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
 		return response
 
@@ -191,11 +197,25 @@ class MainHandler(tornado.web.RequestHandler):
 		self.send_message(msg['FromUserName'], msg['PicUrl'])
 		return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
+	def airlist(self, msg, content):
+		airlist = self.send_message(msg['FromUserName'], content)
+		return textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', airlist)
+
+	def bindair(self, msg, content):
+		result = self.send_message(msg['FromUserName'], content)
+		return textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', result)
+
 	def help(self):
-		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll'
+		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll\nairlist'
 
 	def open(self, msg):
 		result = self.send_message(msg['FromUserName'], 'open')
+		if result:
+			return 'true'
+		return 'false'
+
+	def close(self, msg):
+		result = self.send_message(msg['FromUserName'], 'close')
 		if result:
 			return 'true'
 		return 'false'
@@ -358,8 +378,11 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 		if not cache.get('pi:' + pi_id):
 			logging.error("on_message not bind wx")
 			return
-		logging.info('photo:' + message)
-		cache.set("pi_msg:" + pi_id, message)
+		logging.info('msg:' + message)
+		if message == 'success' or message == 'failed' or message
+			cache.set("pi_msg:" + pi_id, message)
+		elif message == 'hi':
+			self.write_message('welcome')
         #parsed = tornado.escape.json_decode(message)
         #chat = {
         #    "id": str(uuid.uuid4()),
