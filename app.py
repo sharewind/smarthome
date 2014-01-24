@@ -211,7 +211,9 @@ class MainHandler(tornado.web.RequestHandler):
 	def bindair(self, msg, content):
 		try:
 			index = int(content[7:])
-			term = cache.lindex(index - 1)
+			wx_id = msg['FromUserName']
+			pi_id = cache.get('wx:' + wx_id)
+			term = cache.lindex('pi:' + pi_id + 'airlist', index - 1)
 			if not term:
 				return 'term:' + index + ' is not exist'
 			else:
@@ -271,7 +273,7 @@ class MainHandler(tornado.web.RequestHandler):
 				for data in jsonmsg['data']:
 					one = str(data['index']) + ':' + data['servicename'] + ':' + data['ip'] + ':' + str(data['port'])
 					airlist = airlist + one + '\n'
-					cache.rpush(data)
+					cache.rpush('pi:' + pi_id + 'airlist',data)
 				return airlist
 
 			elif 'bindair_reply' == jsonmsg['action']:
