@@ -269,7 +269,7 @@ class MainHandler(tornado.web.RequestHandler):
 			elif 'env_reply' == jsonmsg['action']:
 				temperature = jsonmsg['data'][0]['temperature']
 				humidity = jsonmsg['data'][0]['humidity']
-				content = '温度：' + str(temperature) + '\n' + '湿度：' + str(humidity) + '%'
+				content = '温度：' + str(temperature) + '°C\n' + '湿度：' + str(humidity) + '%'
 				return content
 
 			elif 'airlist_reply' == jsonmsg['action']:
