@@ -147,7 +147,7 @@ def my_on_message(message):
 	elif "bindair" == message:
 		return
 		
-    elif "photo" == message:
+	elif "photo" == message:
 		name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
 		path = '/root/pi/take_photo/' + name + '.jpg'
 		print time.time()
@@ -160,7 +160,7 @@ def my_on_message(message):
 		else:
 			# send error
 			client.send_message("http://img.itc.cn/photo/oMAER7INJZb")
-			
+
 	elif message.startswith('http://'):
 		airplay.display_image(message, '10.2.58.240', '7000')
 	else:

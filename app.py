@@ -201,10 +201,10 @@ class MainHandler(tornado.web.RequestHandler):
 		return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 	def airlist(self, msg, content):
-		return airlist = self.send_message(msg['FromUserName'], content)
+		return self.send_message(msg['FromUserName'], content)
 
 	def bindair(self, msg, content):
-		return result = self.send_message(msg['FromUserName'], content)
+		return self.send_message(msg['FromUserName'], content)
 
 	def help(self):
 		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll\nairlist'
