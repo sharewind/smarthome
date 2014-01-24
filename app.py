@@ -423,14 +423,13 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 
 		else:
 			logging.info('msg:' + message)
-			# json.loads(message)
 			# if message == 'success' or message == 'failed' or message.startswith('http'):
 			try:
 				jsonmsg = json.loads(message)
 				cache.set("pi_msg:" + pi_id, message)
 				return
 			except:
-				logging.error('message is not json')
+				logging.error('message is not json', exc_info=True)
 		
         #parsed = tornado.escape.json_decode(message)
         #chat = {
@@ -464,6 +463,7 @@ def main():
     app = Application()
     app.listen(options.port)
     tornado.autoreload.start(io_loop=None, check_time=500)
+    logging.info("start app....")
     tornado.ioloop.IOLoop.instance().start()
 
 
