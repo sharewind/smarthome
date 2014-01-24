@@ -189,7 +189,7 @@ def my_on_message(message):
 			    target = json.loads(message[8:])
 			    airplay_host = target["ip"]
 			    airplay_port = target["port"] 
-			    response = {'status':True, 'code':0, 'action':'airbind_reply','desc':'airbind on ' + target['servicename']+ ' success'}
+			    response = {'status':True, 'code':0, 'action':'airbind_reply','data':'airbind on ' + target['servicename']+ ' success'}
 			    client.send_message(json.dumps(response))
 			except Exception,e:
 				logging.error("airbind error %s",e)
