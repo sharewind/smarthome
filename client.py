@@ -134,10 +134,16 @@ def my_on_message(message):
 		logging.info("server respone welcome!")
 		Airplay.list_airplay()
 		return
+
+	elif 'airlist' == message:
+		return
+
 	elif "open" == message:
 		return
+
 	elif "close" == message:
 		return
+
 	elif "bindair" == message:
 		return
 		
@@ -154,6 +160,7 @@ def my_on_message(message):
 		else:
 			# send error
 			client.send_message("http://img.itc.cn/photo/oMAER7INJZb")
+			
 	elif message.startswith('http://'):
 		airplay.display_image(message, '10.2.58.240', '7000')
 	else:
