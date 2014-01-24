@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import socket
 import tornado.escape
 import tornado.options
 import tornado.web
@@ -109,20 +110,34 @@ class WebSocketClient:
 		except Exception,e:
 			logging.error("send message error=%s",e)
 
+
 class Airplay(object):
 	ioloop = tornado.ioloop.IOLoop.instance()
 	mdns = MDNS(ioloop)
 	#mdns.register('My HTTP Service', '_http._tcp', 8080)
 	server_list = set()
+	is_airplay = False
 
 	@classmethod
 	def list_airplay(cls):
+		if cls.is_airplay == True:
+		    return 
+		else:
+		    cls.is_airplay = True
+
 		logging.info("airplay start discover")
 		cls.server_list = {} 
 		def on_discovered(index, servicename, fullname, host, port, txtRecord):
-			item = {'index':index, 'servicename':servicename,'fullname':fullname,'host':host,'port':port, 'txtRecord':txtRecord}
+			try:
+				if isinstance(servicename, unicode):
+					servicename = servicename.encode('utf-8')
+					logging.info(servicename)
+				ip = socket.gethostbyname(host)
+			except Exception,e:
+				pass
+			item = {'index':index, 'servicename':servicename,'fullname':fullname,'host':host,'port':port,'ip':ip,'txtRecord':txtRecord}
 			logging.info("airplay discoverd %s=%s", servicename, item)
-			cls.server_list[index] = item	
+			cls.server_list[fullname] = item	
 		
 		def on_lost(index, name, regtype, domain):
 			logging.info("airplay on_list")
@@ -130,7 +145,7 @@ class Airplay(object):
 	
 		regtype = '_airplay._tcp'
 		cls.mdns.discover(regtype, on_discovered, on_lost)
-		cls.ioloop.add_timeout(cls.ioloop.time() + 5, cls.end_discover)
+		cls.ioloop.add_timeout(cls.ioloop.time() + 3, cls.end_discover)
 
 	@classmethod
 	def end_discover(cls):
@@ -141,74 +156,123 @@ class Airplay(object):
 			#regtype = '_airplay._tcp'
 			regtype = '_airplay._tcp'
 			cls.mdns.end_discovery(regtype)
-			content = json.dumps(cls.server_list)
-			get_client().send_message(content)
+
+			response = None
+			if len(cls.server_list) > 0: 
+				air_list = []
+				for key,value in cls.server_list.items():
+					air_list.append(value)
+				response = {
+					'status':True,
+					'code':0,
+					'data':air_list,
+					'action':'airlist_reply',
+				}
+			else:
+				response = {'status':False, 'code':-1, 'data':None, 'action':'airlist_reply', 'desc':u'未发现airplay设备'}
+			logging.info("airlist response=%s",response)
+			message = json.dumps(response)
+			client.send_message(message)
 			cls.server_list = {}
+			cls.is_airplay = False
 		except Exception,e:
 			logging.error("airplay end_discovery error %s", e)
 
 
 def my_on_message(message):
 	logging.info("on message processing .....")
-	if "welcome" == message:
-		logging.info("server respone welcome!")
-		Airplay.list_airplay()
-		return
 
-	elif 'airlist' == message:
-		return
+	global airplay_host
+	global airplay_port
 
-	elif "open" == message:
-		GPIO.output(PIN_1, GPIO.HIGH)
-		GPIO.output(PIN_2, GPIO.HIGH)
-		GPIO.output(PIN_3, GPIO.HIGH)
-		GPIO.output(PIN_4, GPIO.HIGH)
+	try:
+		if "welcome" == message:
+			Airplay.list_airplay()
+			logging.info("server respone welcome!")
+			return
 
-	elif "close" == message:
-		GPIO.output(PIN_1, GPIO.LOW)
-		GPIO.output(PIN_2, GPIO.LOW)
-		GPIO.output(PIN_3, GPIO.LOW)
-		GPIO.output(PIN_4, GPIO.LOW)
+		elif 'airlist' == message:
+			Airplay.list_airplay()
+			return
 
-	elif message.startswith('bindair'):
-		id = message[7:]
-		return
-		
-	#send photo
-	elif "photo" == message:
-		name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
-		path = '/root/pi/take_photo/' + name + '.jpg'
-		status, msg = commands.getstatusoutput('./take.sh ' + 'photo ' + datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S'))
-		# send
-		image = open(path, mode='rb')
-		airplay.upload_image(image.read(), sendCallback)
+		elif "open" == message:
+			GPIO.output(PIN_1, GPIO.HIGH)
+			GPIO.output(PIN_2, GPIO.HIGH)
+			GPIO.output(PIN_3, GPIO.HIGH)
+			GPIO.output(PIN_4, GPIO.HIGH)
+                        ret = {}
+                        ret['status'] = True
+                        ret['action'] = "open_reply"
+                        ret['code'] = 0
+                        ret['data'] = 'success'
+                        client.send_message(json.dumps(ret))
 
-	#take photo
-	elif message.startswith('http://'):
-		airplay.display_image(message, '10.2.58.240', '7000')
+		elif "close" == message:
+			GPIO.output(PIN_1, GPIO.LOW)
+			GPIO.output(PIN_2, GPIO.LOW)
+			GPIO.output(PIN_3, GPIO.LOW)
+			GPIO.output(PIN_4, GPIO.LOW)
+                        ret = {}
+                        ret['status'] = True
+                        ret['action'] = "close_reply"
+                        ret['code'] = 0
+                        ret['data'] = 'success'
+                        client.send_message(json.dumps(ret))
 
-	#send temperature humidity
-	elif "env" == message:
-		r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
-		t = r.get('temperature')
-		h = r.get('humidity')
-		ret = {}
-		ret['status'] = True
-		ret['action'] = "env_reply"
-		ret['code'] = 0
-		data = []
-		data1 = {}
-		data1['temperature'] = t
-		data1['humidity'] = h
-		data.append(data1)
-		ret['data'] = data
-		client.send_message(json.dumps(ret))
+		elif message.startswith('airbind'):
+			logging.info("%s",message[8:])
+			try:
+			    target = json.loads(message[8:])
+			    airplay_host = target["ip"]
+			    airplay_port = target["port"] 
+			    response = {'status':True, 'code':0, 'action':'airbind_reply','data':'airbind on ' + target['servicename']+ ' success'}
+			    client.send_message(json.dumps(response))
+			except Exception,e:
+				logging.error("airbind error %s",e)
+				response = {'status':False, 'code':-1, 'action':'airbind_reply','desc':'airbind on error:' + str(e)}
+				client.send_message(json.dumps(response))
+			return
+			
+		#send photo
+		elif "photo" == message:
+			name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
+			path = '/root/pi/take_photo/' + name + '.jpg'
+			status, msg = commands.getstatusoutput('./take.sh ' + 'photo ' + datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S'))
+			# send
+			image = open(path, mode='rb')
+			airplay.upload_image(image.read(), sendCallback)
 
-	else:
-		logging.warn("unregonize message=%s", message)
-		return
+		#take photo
+		elif message.startswith('http://'):
+			airplay.display_image(message, airplay_host, airplay_port)
+
+		#send temperature humidity
+		elif "env" == message:
+			r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
+			t = r.get('temperature')
+			h = r.get('humidity')
+			ret = {}
+			ret['status'] = True
+			ret['action'] = "env_reply"
+			ret['code'] = 0
+			data = []
+			data1 = {}
+			data1['temperature'] = t
+			data1['humidity'] = h
+			data.append(data1)
+			ret['data'] = data
+			client.send_message(json.dumps(ret))
+
+		else:
+			logging.warn("unregonize message=%s", message)
+			return
+	except Exception,e:
+		logging.error("process message error %s",e)
 
 client = None
+airplay_host = None
+airplay_port = None
+
 def get_client(pi_id):
 	global client
 	if client is None:
@@ -221,10 +285,11 @@ def get_client(pi_id):
 
 def sendCallback(msg):
 	dict = eval(msg)
-        ret = {}
-        ret['status'] = True
-        ret['action'] = "photo_reply"
-        ret['code'] = 0
+        ret = {
+        	'status':True,
+		'code':0,
+        	'action': "photo_reply"
+	}
         data = []
         data1 = {}
         data1['big_url'] = dict['big_url']
@@ -237,13 +302,10 @@ def main():
 	app = Application()
 	app.listen(options.port)
 
-	if len(sys.argv) == 2:
-		id = sys.argv[1]
-		
-	else:
-		id = None
-
-	get_client(id)
+	pi_id = None
+	if(len(sys.argv) > 1):
+		pi_id = sys.argv[1]	
+	get_client(pi_id)
 	tornado.ioloop.IOLoop.instance().start()
 
 

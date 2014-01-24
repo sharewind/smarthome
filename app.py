@@ -126,6 +126,9 @@ class MainHandler(tornado.web.RequestHandler):
 				msg = cache.get('pi_msg:' + pi_id)
 				if msg:
 					cache.delete('pi_msg:' + pi_id)
+					msg = self.parse_json(wx_id, pi_id, msg)
+					logging.info('msg:')
+					logging.info(msg)
 					return msg
 				else:
 					time.sleep(0.5)
@@ -162,11 +165,11 @@ class MainHandler(tornado.web.RequestHandler):
 		elif content =='airlist':
 			content = self.airlist(msg, content)
 
-		elif content == 'bindair':
-			content == self.bindair(msg, content)
+		elif content.startswith('airbind'):
+			content = self.airbind(msg, content)
 
 		elif content == 'env':
-			content ==self.env(msg, content)
+			content = self.env(msg, content)
 
 		elif content == 'photo':
 			url = self.send_message(msg['FromUserName'], content)
@@ -192,6 +195,7 @@ class MainHandler(tornado.web.RequestHandler):
 			logging.info('pi_id:' + pi_id)
 			content = self.bind(msg['FromUserName'], pi_id)
 
+		logging.info("content:")
 		logging.info(content)
 		# result = self.send_message(msg['FromUserName'], msg)
 		# logging.info(result)
@@ -206,8 +210,22 @@ class MainHandler(tornado.web.RequestHandler):
 	def airlist(self, msg, content):
 		return self.send_message(msg['FromUserName'], content)
 
-	def bindair(self, msg, content):
-		return self.send_message(msg['FromUserName'], content)
+	def airbind(self, msg, content):
+		try:
+			index = int(content[7:])
+			wx_id = msg['FromUserName']
+			pi_id = cache.get('wx:' + wx_id)
+			term = cache.lindex('pi:' + pi_id + ':airlist', index - 1)
+			if not term:
+				result = 'term:' + str(index) + ' is not exist'
+			else:
+				result = self.send_message(msg['FromUserName'], 'airbind:' + term)
+		except:
+			logging.error('index is not int', exc_info=True)
+			result = "please input int"
+		logging.info('airbind:result:' + result)
+		return result
+		
 
 	def env(self, msg, content):
 		return self.send_message(msg['FromUserName'], content)
@@ -216,16 +234,10 @@ class MainHandler(tornado.web.RequestHandler):
 		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll\nairlist\nenv'
 
 	def open(self, msg):
-		result = self.send_message(msg['FromUserName'], 'open')
-		if result:
-			return 'true'
-		return 'false'
+		return self.send_message(msg['FromUserName'], 'open')
 
 	def close(self, msg):
-		result = self.send_message(msg['FromUserName'], 'close')
-		if result:
-			return 'true'
-		return 'false'
+		return self.send_message(msg['FromUserName'], 'close')
 
 	def parse_msg(self):
 		"""
@@ -241,8 +253,43 @@ class MainHandler(tornado.web.RequestHandler):
 			msg[child.tag] = child.text
 		return msg
 
-	def parse_json(self, json):
-		return
+	def parse_json(self, wx_id, pi_id, msg):
+		jsonmsg = json.loads(msg)
+		if jsonmsg['status']:
+			if 'photo_reply' == jsonmsg['action']:
+				return jsonmsg['data'][0]['big_url']
+
+			elif 'open_reply' == jsonmsg['action']:
+				return jsonmsg['data']
+
+			elif 'close_reply' == jsonmsg['action']:
+				return jsonmsg['data']
+
+			elif 'env_reply' == jsonmsg['action']:
+				temperature = jsonmsg['data'][0]['temperature']
+				humidity = jsonmsg['data'][0]['humidity']
+				content = '温度：' + str(temperature) + '°C\n' + '湿度：' + str(humidity) + '%'
+				return content
+
+			elif 'airlist_reply' == jsonmsg['action']:
+				cache.delete('pi:' + pi_id + ':airlist')
+				airlist = ''
+				for data in jsonmsg['data']:
+					one = str(data['index']) + ':' + data['servicename'] + ':' + data['ip'] + ':' + str(data['port'])
+					airlist = airlist + one + '\n'
+					cache.rpush('pi:' + pi_id + ':airlist', json.dumps(data))
+				return airlist
+
+			elif 'airbind_reply' == jsonmsg['action']:
+				return jsonmsg['data']
+
+			elif 'image_reply' == jsonmsg['action']:
+				return jsonmsg['data']
+
+		else:
+			return 'failed'
+			
+			
 
 	def bind(self, wxid, piid):
 		
@@ -322,8 +369,8 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			return False, '设备' + pi_id + '已被绑定'
 		# if cls.wx_pi_dict.get(wx_id):
 		elif cache.get('wx:' + wx_id):
-			pi_id = cache.get('wx:' + wx_id)
-			cache.delete('pi:' + pi_id)
+			old_pi_id = cache.get('wx:' + wx_id)
+			cache.delete('pi:' + old_pi_id)
 			logging.info("bind wx_id repeat! wx_id=%s, pi_id=%s", wx_id, pi_id)
 			msg = '微信重新绑定' + pi_id
 		else:
@@ -383,19 +430,28 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			logging.error("Error no pi_id header set")
 			return 
 		
-		if not PiSocketHandler.pi_clients.get(pi_id):
+		elif message == 'hi':
+			self.write_message('welcome')
+			return
+
+		elif not PiSocketHandler.pi_clients.get(pi_id):
 			logging.error("on_message client not regiester")
 			return 
 
-		if not cache.get('pi:' + pi_id):
+		elif not cache.get('pi:' + pi_id):
 			logging.error("on_message not bind wx")
 			return
-		logging.info('msg:' + message)
-		# json.loads(j)
-		if message == 'success' or message == 'failed' or message.startswith('http'):
-			cache.set("pi_msg:" + pi_id, message)
-		elif message == 'hi':
-			self.write_message('welcome')
+
+		else:
+			logging.info('msg:' + message)
+			# if message == 'success' or message == 'failed' or message.startswith('http'):
+			try:
+				jsonmsg = json.loads(message)
+				cache.setex("pi_msg:" + pi_id, message, 5)
+				return
+			except:
+				logging.error('message is not json', exc_info=True)
+		
         #parsed = tornado.escape.json_decode(message)
         #chat = {
         #    "id": str(uuid.uuid4()),
@@ -428,6 +484,7 @@ def main():
     app = Application()
     app.listen(options.port)
     tornado.autoreload.start(io_loop=None, check_time=500)
+    logging.info("start app....")
     tornado.ioloop.IOLoop.instance().start()
 
 
