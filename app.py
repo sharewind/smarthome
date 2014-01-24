@@ -168,7 +168,7 @@ class MainHandler(tornado.web.RequestHandler):
 			content == self.bindair(msg, content)
 
 		elif content == 'env':
-			content ==self.env(msg, content)
+			content = self.env(msg, content)
 
 		elif content == 'photo':
 			url = self.send_message(msg['FromUserName'], content)
@@ -194,7 +194,7 @@ class MainHandler(tornado.web.RequestHandler):
 			logging.info('pi_id:' + pi_id)
 			content = self.bind(msg['FromUserName'], pi_id)
 
-		logging.info(content)
+		logging.info("content:" + content)
 		# result = self.send_message(msg['FromUserName'], msg)
 		# logging.info(result)
 		# content = content
