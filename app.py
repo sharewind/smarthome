@@ -118,55 +118,16 @@ class MainHandler(tornado.web.RequestHandler):
 		self.finish(response) 
 
 	def send_message(self, wx_id, msg, action, async=False, msgid=None):
+		PiSocketHandler.send_message(wx_id, msg)
+		client = PiSocketHandler.get_client(wx_id) 
+		def client_callback(message):
+			logging.info("callback from client %s", message)			
+		if client is not None:
+			yield client.read_message(self, client_callback)
+		#if async or not msgid:
+		#	PiSocketHandler.send_message(wx_id, msg)
+		#	return
 		
-		if async or not msgid:
-			PiSocketHandler.send_message(wx_id, msg)
-			return
-		pi_id = cache.get('wx:' + wx_id)
-		if pi_id:
-			if msgid:
-				cacheMsgId = cache.get('MsgId:' + msgid)
-				if cacheMsgId:
-					logging.info('2 MsgId:' + cacheMsgId)
-					result = cache.get("pi_msg:" + pi_id + ':' + action)
-					if result:
-						logging.info('result:')
-						logging.info(result)
-						result = self.parse_json(wx_id, pi_id, result)
-						return result
-					else:
-						cache.setex('MsgId:' + cacheMsgId, cacheMsgId, 15)
-						self.set_status(500)
-						return
-						# time.sleep(5)
-						# return 'time out'
-				else:
-					cache.delete("pi_msg:" + pi_id + ':' + action)
-					logging.info('1 MsgId:' + msgid)
-					cache.setex('MsgId:' + msgid, msgid, 15)
-					PiSocketHandler.send_message(wx_id, msg)
-					self.set_status(500)
-					return
-					# time.sleep(5)
-					# return 'time out'
-		return 'unbind'
-		# pi_id = cache.get('wx:' + wx_id)
-		# if pi_id:
-		# 	for i in range(0, 5000):
-		# 		if i % 1000 == 0:
-		# 			logging.info(i)
-		# 		msg = cache.get("pi_msg:" + pi_id + ':' + action)
-		# 		if msg:
-		# 			cache.delete("pi_msg:" + pi_id + ':' + action)
-		# 			msg = self.parse_json(wx_id, pi_id, msg)
-		# 			logging.info('msg:')
-		# 			logging.info(msg)
-		# 			return msg
-		# 		else:
-		# 			time.sleep(0.001)
-		# 	return 'fetch fail'
-		# return 'no msg'
-
 
 	def roll(self, content):
 		temp = content.split(' ')
@@ -381,6 +342,11 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 	#cache = []
 	#cache_size = 200
 
+	def __init__(self, application, request, **kwargs):
+		self.read_future = None
+		self.read_queue = collections.deque()
+		tornado.websocket.WebSocketHandler.__init__(self, application, request,**kwargs)
+
 	def allow_draft76(self):
 		# for iOS 5.0 Safari
 		return True
@@ -475,48 +441,46 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			client.write_message(message)
 		except:
 			logging.error("Error sending message", exc_info=True)
+	
+	@classmethod
+	def get_client(cls, wx_id):
+		logging.info("get_client wx_id=%s", wx_id)
+		pi_id = cache.get("wx:" + wx_id)
+		client = cls.pi_clients.get(pi_id)
+		return client
+
+	def write_message(self, message):
+		try:
+			client.write_message(message)
+		except:
+			logging.error("Error sending message", exc_info=True)
+
+	def read_message(self, callback=None):
+		"""Reads a message from the WebSocket server.
+		Returns a future whose result is the message, or None
+		if the connection is closed.  If a callback argument
+		is given it will be called with the future when it is
+		ready.
+		"""
+		assert self.read_future is None
+		future = TracebackFuture()
+		if self.read_queue:
+			future.set_result(self.read_queue.popleft())
+		else:
+			self.read_future = future
+		if callback is not None:
+			self.io_loop.add_future(future, callback)
+		return future
 
 	def on_message(self, message):
 		pi_id = self.get_argument("pi_id",None)
-		logging.info("got message client pi_id=%s,message=%s", pi_id, message)
+		logging.info("on_message client pi_id=%s,message=%s", pi_id, message)
 
-		if not pi_id:
-			logging.error("Error no pi_id header set")
-			return 
-		
-		elif message == 'hi':
-			self.write_message('welcome')
-			return
-
-		elif not PiSocketHandler.pi_clients.get(pi_id):
-			logging.error("on_message client not regiester")
-			return 
-
-		elif not cache.get('pi:' + pi_id):
-			logging.error("on_message not bind wx")
-			return
-
+		if self.read_future is not None:
+			self.read_future.set_result(message)
+			self.read_future = None
 		else:
-			logging.info('msg:' + message)
-			# if message == 'success' or message == 'failed' or message.startswith('http'):
-			try:
-				jsonmsg = json.loads(message)
-				action = jsonmsg['action']
-				cache.setex("pi_msg:" + pi_id + ':' + action, message, 15)
-				return
-			except:
-				logging.error('message is not json', exc_info=True)
-		
-        #parsed = tornado.escape.json_decode(message)
-        #chat = {
-        #    "id": str(uuid.uuid4()),
-        #    "body": parsed["body"],
-        #    }
-        #chat["html"] = tornado.escape.to_basestring(
-        #    self.render_string("message.html", message=chat))
-
-        #PiSocketHandler.update_cache(chat)
-        #PiSocketHandler.send_updates(chat)
+			self.read_queue.append(message)
 
 class WeiXinBindHandler(tornado.web.RequestHandler):
     def get(self):
