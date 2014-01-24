@@ -218,16 +218,16 @@ class MainHandler(tornado.web.RequestHandler):
 		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll\nairlist\nenv'
 
 	def open(self, msg):
-		result = self.send_message(msg['FromUserName'], 'open')
-		if result:
-			return 'true'
-		return 'false'
+		return result = self.send_message(msg['FromUserName'], 'open')
+		# if result:
+		# 	return 'true'
+		# return 'false'
 
 	def close(self, msg):
-		result = self.send_message(msg['FromUserName'], 'close')
-		if result:
-			return 'true'
-		return 'false'
+		return result = self.send_message(msg['FromUserName'], 'close')
+		# if result:
+		# 	return 'true'
+		# return 'false'
 
 	def parse_msg(self):
 		"""
@@ -350,8 +350,8 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			return False, '设备' + pi_id + '已被绑定'
 		# if cls.wx_pi_dict.get(wx_id):
 		elif cache.get('wx:' + wx_id):
-			pi_id = cache.get('wx:' + wx_id)
-			cache.delete('pi:' + pi_id)
+			old_pi_id = cache.get('wx:' + wx_id)
+			cache.delete('pi:' + old_pi_id)
 			logging.info("bind wx_id repeat! wx_id=%s, pi_id=%s", wx_id, pi_id)
 			msg = '微信重新绑定' + pi_id
 		else:
