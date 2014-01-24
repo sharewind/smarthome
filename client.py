@@ -155,7 +155,7 @@ class Airplay(object):
 					'action':'airlist_reply',
 				}
 			else:
-				response = {'status':False, 'code':-1, 'data':None, 'action':'airlist_reply', 'desc':u'未发现airplay设备'}
+				response = {'status':False, 'code':-1, 'data':None, 'action':'airlist_reply', 'data':u'未发现airplay设备'}
 			logging.info("airlist response=%s",response)
 			message = json.dumps(response)
 			client.send_message(message)
@@ -210,7 +210,7 @@ def my_on_message(message):
 			    client.send_message(json.dumps(response))
 			except Exception,e:
 				logging.error("airbind error %s",e)
-				response = {'status':False, 'code':-1, 'action':'airbind_reply','desc':'airbind on error:' + str(e)}
+				response = {'status':False, 'code':-1, 'action':'airbind_reply','data':'airbind on error:' + str(e)}
 				client.send_message(json.dumps(response))
 			return
 			
