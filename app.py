@@ -160,7 +160,10 @@ class MainHandler(tornado.web.RequestHandler):
 			content = self.pi_id_list()
 
 		elif content =='airlist':
-			content = self.airlist(msg,content)
+			content = self.airlist(msg, content)
+
+		elif content == 'bindair':
+			content == self.bindair(msg, content)
 
 		elif content == 'photo':
 			url = self.send_message(msg['FromUserName'], content)
@@ -198,12 +201,10 @@ class MainHandler(tornado.web.RequestHandler):
 		return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 	def airlist(self, msg, content):
-		airlist = self.send_message(msg['FromUserName'], content)
-		return textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', airlist)
+		return self.send_message(msg['FromUserName'], content)
 
 	def bindair(self, msg, content):
-		result = self.send_message(msg['FromUserName'], content)
-		return textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', result)
+		return self.send_message(msg['FromUserName'], content)
 
 	def help(self):
 		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll\nairlist'
