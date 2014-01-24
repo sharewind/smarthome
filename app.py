@@ -234,14 +234,16 @@ class MainHandler(tornado.web.RequestHandler):
 
 	def help(self):
 		return """list获取设备ID列表
-bind+设备ID绑定设备(bind123)
+bind+设备ID绑定设备
+(eg. bind123)
 unbind设备解绑
 open开灯
 close关灯
 photo取照片
 roll
 airlist设备可连接终端列表
-airbind+终端编号(airbind1)
+airbind+终端编号
+(eg. airbind1)
 env环境数据
 直接发送照片"""
 
