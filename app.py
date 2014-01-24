@@ -126,6 +126,7 @@ class MainHandler(tornado.web.RequestHandler):
 				msg = cache.get('pi_msg:' + pi_id)
 				if msg:
 					cache.delete('pi_msg:' + pi_id)
+					msg = parse_json(msg)
 					return msg
 				else:
 					time.sleep(0.5)
@@ -241,8 +242,33 @@ class MainHandler(tornado.web.RequestHandler):
 			msg[child.tag] = child.text
 		return msg
 
-	def parse_json(self, json):
-		return
+	def parse_json(self, msg):
+		jsonmsg = json .loads(msg)
+		if jsonmsg['status'] == 'false':
+			return 'failed'
+
+		else:
+			if 'photo_reply' == jsonmsg['action']:
+				return jsonmsg['data']['big_url']
+
+			elif 'open_reply' == jsonmsg['action']:
+				return
+
+			elif 'close_reply' == jsonmsg['action']:
+				return
+
+			elif 'env_reply' == jsonmsg['action']:
+				return
+
+			elif 'airlist_reply' == jsonmsg['action']:
+				return
+
+			elif 'image_reply' == jsonmsg['action']:
+				return
+
+			elif 'photo_reply' == jsonmsg['action']:
+				return
+			
 
 	def bind(self, wxid, piid):
 		
@@ -383,19 +409,29 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			logging.error("Error no pi_id header set")
 			return 
 		
-		if not PiSocketHandler.pi_clients.get(pi_id):
+		elif message == 'hi':
+			self.write_message('welcome')
+			return
+
+		elif not PiSocketHandler.pi_clients.get(pi_id):
 			logging.error("on_message client not regiester")
 			return 
 
-		if not cache.get('pi:' + pi_id):
+		elif not cache.get('pi:' + pi_id):
 			logging.error("on_message not bind wx")
 			return
-		logging.info('msg:' + message)
-		# json.loads(j)
-		if message == 'success' or message == 'failed' or message.startswith('http'):
-			cache.set("pi_msg:" + pi_id, message)
-		elif message == 'hi':
-			self.write_message('welcome')
+
+		else:
+			logging.info('msg:' + message)
+			# json.loads(message)
+			# if message == 'success' or message == 'failed' or message.startswith('http'):
+			try:
+				jsonmsg = json.loads(message)
+				cache.set("pi_msg:" + pi_id, message)
+				return
+			except:
+				logging.error('message is not json')
+		
         #parsed = tornado.escape.json_decode(message)
         #chat = {
         #    "id": str(uuid.uuid4()),
