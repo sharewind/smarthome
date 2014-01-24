@@ -250,12 +250,15 @@ class MainHandler(tornado.web.RequestHandler):
 				return jsonmsg['data']
 
 			elif 'env_reply' == jsonmsg['action']:
-				return jsonmsg['data']
+				temperature = jsonmsg['data']['temperature']
+				humidity = jsonmsg['data']['humidity']
+				content = '温度：' + str(temperature) + '\n' + '湿度：' + str(humidity) + '%'
+				return 
 
 			elif 'airlist_reply' == jsonmsg['action']:
 				airlist = ''
 				for data in jsonmsg['data']:
-					airlist = airlist + str(data['index']) + ':' + data['ip'] + ':' + str(data['port']) + '\n'
+					airlist = airlist + str(data['index']) + ':' data['host']+ ':' + data['ip'] + ':' + str(data['port']) + '\n'
 				return airlist
 
 			elif 'image_reply' == jsonmsg['action']:
