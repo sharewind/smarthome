@@ -12,6 +12,8 @@ import airplay
 import json
 import datetime
 import time
+import redis
+import sys
 from mdns_util import MDNS
 
 from tornado.options import define, options
@@ -115,7 +117,7 @@ class Airplay(object):
 	
 		regtype = '_airplay._tcp'
 		cls.mdns.discover(regtype, on_discovered, on_lost)
-		cls.ioloop.add_timeout(cls.ioloop.time() + 1, cls.end_discover)
+		cls.ioloop.add_timeout(cls.ioloop.time() + 3, cls.end_discover)
 
 	@classmethod
 	def end_discover(cls):
@@ -165,9 +167,14 @@ def my_on_message(message):
 	elif "close" == message:
 		return
 
-	elif "bindair" == message:
+	elif 'env' == message:
+		return
+
+	elif message.startswith('bindair'):
+		id = message[7:]
 		return
 		
+	#send photo
 	elif "photo" == message:
 		name = datetime.datetime.now().strftime('%y-%m-%d-%H:%M:%S')
 		path = '/root/pi/take_photo/' + name + '.jpg'
@@ -182,17 +189,30 @@ def my_on_message(message):
 			# send error
 			client.send_message("http://img.itc.cn/photo/oMAER7INJZb")
 
+	#take photo
 	elif message.startswith('http://'):
 		airplay.display_image(message, '10.2.58.240', '7000')
+	elif "env" == message:
+		r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
+		t = r.get('temperature')
+		h = r.get('humidity')
+		ret = {}
+		ret['temperature'] = t
+		ret['humidity'] = h
+		client.send_message(json.dumps(ret))
 	else:
 		logging.warn("unregonize message=%s", message)
 		return
 
 client = None
-def get_client():
+airplay_host = None
+airplay_port = None
+
+def get_client(pi_id):
 	global client
 	if client is None:
-		pi_id = "hackpp"
+		if pi_id is None:
+			pi_id = 113696732
 		url = "ws://go123.us/smartsocket?pi_id=" + str(pi_id)
 		client = WebSocketClient(pi_id, url,my_on_message) 
 	return client
@@ -208,7 +228,10 @@ def main():
 	app = Application()
 	app.listen(options.port)
 
-	get_client()
+	pi_id = None
+	if(len(sys.argv) > 1):
+		pi_id = sys.argv[1]	
+	get_client(pi_id)
 	tornado.ioloop.IOLoop.instance().start()
 
 
