@@ -14,27 +14,13 @@ import datetime
 import time
 import redis
 import sys
-try:
-  import RPi.GPIO as GPIO
-except RuntimeError:
-  print("Error importing RPi.GPIO!\n")
-  print("This is probably because you need superuser privileges.\n")
-  print("You can achieve this by using 'sudo' to run your script.\n")
+import control
+
 from mdns_util import MDNS
 
 from tornado.options import define, options
 
-PIN_1 = 8
-PIN_2 = 10
-PIN_3 = 12
-PIN_4 = 16
-
-GPIO.setmode(GPIO.BOARD)
-GPIO.setwarnings(False)
-GPIO.setup(PIN_1, GPIO.OUT, initial = GPIO.LOW)
-GPIO.setup(PIN_2, GPIO.OUT, initial = GPIO.LOW)
-GPIO.setup(PIN_3, GPIO.OUT, initial = GPIO.LOW)
-GPIO.setup(PIN_4, GPIO.OUT, initial = GPIO.LOW)
+control.init()
 
 define("port", default=4444, help="run on the given port", type=int)
 
@@ -196,11 +182,8 @@ def my_on_message(message):
 			return
 
 		elif "open" == message:
-			GPIO.output(PIN_1, GPIO.HIGH)
-			GPIO.output(PIN_2, GPIO.HIGH)
-			GPIO.output(PIN_3, GPIO.HIGH)
-			GPIO.output(PIN_4, GPIO.HIGH)
-                        ret = {}
+                        control.open()
+			ret = {}
                         ret['status'] = True
                         ret['action'] = "open_reply"
                         ret['code'] = 0
@@ -208,10 +191,7 @@ def my_on_message(message):
                         client.send_message(json.dumps(ret))
 
 		elif "close" == message:
-			GPIO.output(PIN_1, GPIO.LOW)
-			GPIO.output(PIN_2, GPIO.LOW)
-			GPIO.output(PIN_3, GPIO.LOW)
-			GPIO.output(PIN_4, GPIO.LOW)
+			control.close()
                         ret = {}
                         ret['status'] = True
                         ret['action'] = "close_reply"
