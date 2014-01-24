@@ -164,8 +164,8 @@ class MainHandler(tornado.web.RequestHandler):
 		elif content =='airlist':
 			content = self.airlist(msg, content)
 
-		elif content.startswith('bindair'):
-			content == self.bindair(msg, content)
+		elif content.startswith('airbind'):
+			content == self.airbind(msg, content)
 
 		elif content == 'env':
 			content = self.env(msg, content)
@@ -208,16 +208,16 @@ class MainHandler(tornado.web.RequestHandler):
 	def airlist(self, msg, content):
 		return self.send_message(msg['FromUserName'], content)
 
-	def bindair(self, msg, content):
+	def airbind(self, msg, content):
 		try:
 			index = int(content[7:])
 			wx_id = msg['FromUserName']
 			pi_id = cache.get('wx:' + wx_id)
-			term = cache.lindex('pi:' + pi_id + 'airlist', index - 1)
+			term = cache.lindex('pi:' + pi_id + ':airlist', index - 1)
 			if not term:
 				return 'term:' + index + ' is not exist'
 			else:
-				return self.send_message(msg['FromUserName'], term)
+				return self.send_message(msg['FromUserName'], 'airbind:' + term)
 		except:
 			logging.error('index is not int', exc_info=True)
 			return "please input int"
@@ -268,15 +268,15 @@ class MainHandler(tornado.web.RequestHandler):
 				return 
 
 			elif 'airlist_reply' == jsonmsg['action']:
-				cache.delete('pi:' + pi_id + 'airlist')
+				cache.delete('pi:' + pi_id + ':airlist')
 				airlist = ''
 				for data in jsonmsg['data']:
 					one = str(data['index']) + ':' + data['servicename'] + ':' + data['ip'] + ':' + str(data['port'])
 					airlist = airlist + one + '\n'
-					cache.rpush('pi:' + pi_id + 'airlist',data)
+					cache.rpush('pi:' + pi_id + ':airlist',data)
 				return airlist
 
-			elif 'bindair_reply' == jsonmsg['action']:
+			elif 'airbind_reply' == jsonmsg['action']:
 				return jsonmsg['data']
 
 			elif 'image_reply' == jsonmsg['action']:
