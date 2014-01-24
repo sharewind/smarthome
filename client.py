@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import socket
 import tornado.escape
 import tornado.options
 import tornado.web
@@ -100,9 +101,13 @@ class Airplay(object):
 		logging.info("airplay start discover")
 		cls.server_list = {} 
 		def on_discovered(index, servicename, fullname, host, port, txtRecord):
-			item = {'index':index, 'servicename':servicename,'fullname':fullname,'host':host,'port':port, 'txtRecord':txtRecord}
+			try:
+				ip = socket.gethostbyname(host)
+			except Exception,e:
+				pass
+			item = {'index':index, 'servicename':servicename,'fullname':fullname,'host':host,'port':port,'ip':ip,'txtRecord':txtRecord}
 			logging.info("airplay discoverd %s=%s", servicename, item)
-			cls.server_list[index] = item	
+			cls.server_list[fullname] = item	
 		
 		def on_lost(index, name, regtype, domain):
 			logging.info("airplay on_list")
@@ -110,7 +115,7 @@ class Airplay(object):
 	
 		regtype = '_airplay._tcp'
 		cls.mdns.discover(regtype, on_discovered, on_lost)
-		cls.ioloop.add_timeout(cls.ioloop.time() + 5, cls.end_discover)
+		cls.ioloop.add_timeout(cls.ioloop.time() + 1, cls.end_discover)
 
 	@classmethod
 	def end_discover(cls):
@@ -121,8 +126,23 @@ class Airplay(object):
 			#regtype = '_airplay._tcp'
 			regtype = '_airplay._tcp'
 			cls.mdns.end_discovery(regtype)
-			content = json.dumps(cls.server_list)
-			get_client().send_message(content)
+
+			response = None
+			if len(cls.server_list) > 0: 
+				air_list = []
+				for key,value in cls.server_list.items():
+					air_list.append(value)
+				response = {
+					'status':True,
+					'code':0,
+					'data':air_list,
+					'action':'airlist_reply',
+				}
+			else:
+				response = {'status':False, 'code':-1, 'data':None, 'action':'airlist_reply', 'desc':u'未发现airplay设备'}
+			logging.info("airlist response=%s",response)
+			message = json.dumps(response)
+			client.send_message(message)
 			cls.server_list = {}
 		except Exception,e:
 			logging.error("airplay end_discovery error %s", e)
@@ -131,11 +151,12 @@ class Airplay(object):
 def my_on_message(message):
 	logging.info("on message processing .....")
 	if "welcome" == message:
-		logging.info("server respone welcome!")
 		Airplay.list_airplay()
+		logging.info("server respone welcome!")
 		return
 
 	elif 'airlist' == message:
+		Airplay.list_airplay()
 		return
 
 	elif "open" == message:
@@ -171,7 +192,7 @@ client = None
 def get_client():
 	global client
 	if client is None:
-		pi_id = 113696732
+		pi_id = "hackpp"
 		url = "ws://go123.us/smartsocket?pi_id=" + str(pi_id)
 		client = WebSocketClient(pi_id, url,my_on_message) 
 	return client
