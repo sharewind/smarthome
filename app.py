@@ -195,7 +195,8 @@ class MainHandler(tornado.web.RequestHandler):
 			logging.info('pi_id:' + pi_id)
 			content = self.bind(msg['FromUserName'], pi_id)
 
-		logging.info("content:" + content)
+		logging.info("content:")
+		logging.info(content)
 		# result = self.send_message(msg['FromUserName'], msg)
 		# logging.info(result)
 		# content = content
@@ -218,6 +219,7 @@ class MainHandler(tornado.web.RequestHandler):
 			if not term:
 				result = 'term:' + str(index) + ' is not exist'
 			else:
+				term = json.dumps(term)
 				result = self.send_message(msg['FromUserName'], 'airbind:' + term)
 		except:
 			logging.error('index is not int', exc_info=True)
