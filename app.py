@@ -274,8 +274,10 @@ class MainHandler(tornado.web.RequestHandler):
 			elif 'airlist_reply' == jsonmsg['action']:
 				cache.delete('pi:' + pi_id + ':airlist')
 				airlist = ''
+				list_index = 0
 				for data in jsonmsg['data']:
-					one = str(data['index']) + ':' + data['servicename'] + ':' + data['ip'] + ':' + str(data['port'])
+					list_index = list_index + 1
+					one = str(list_index) + '.:' + data['servicename'] + '_' + data['ip'] + ':' + str(data['port'])
 					airlist = airlist + one + '\n'
 					cache.rpush('pi:' + pi_id + ':airlist', json.dumps(data))
 				return airlist
