@@ -110,22 +110,22 @@ class MainHandler(tornado.web.RequestHandler):
 			response = self.text(msg['Content'].strip(), msg)
 
 		elif msg["MsgType"] == "image":
-			response = self.image(msg)
+			response = self.image(msg, 'image')
 
 		logging.info(response)
 		# result = self.send_message(msg['FromUserName'], msg)
 		# logging.info(result)
 		self.finish(response) 
 
-	def send_message(self, wx_id, msg):
+	def send_message(self, wx_id, msg, action):
 		PiSocketHandler.send_message(wx_id, msg)
 		pi_id = cache.get('wx:' + wx_id)
 		if pi_id:
 			for i in range(0, 10):
 				logging.info(i)
-				msg = cache.get('pi_msg:' + pi_id)
+				msg = cache.get("pi_msg:" + pi_id + ':' + action)
 				if msg:
-					cache.delete('pi_msg:' + pi_id)
+					cache.delete("pi_msg:" + pi_id + ':' + action)
 					msg = self.parse_json(wx_id, pi_id, msg)
 					logging.info('msg:')
 					logging.info(msg)
@@ -172,17 +172,17 @@ class MainHandler(tornado.web.RequestHandler):
 			content = self.env(msg, content)
 
 		elif content == 'photo':
-			url = self.send_message(msg['FromUserName'], content)
+			url = self.send_message(msg['FromUserName'], content, 'photo_reply')
 			return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'photo', 'this is a photo', url, url)
 
 		elif content.startswith('roll'):
 			content = self.roll(content)
 
 		elif content == 'open':
-			content = self.open(msg)
+			content = self.open(msg, content)
 
 		elif content == 'close':
-			content = self.close(msg)
+			content = self.close(msg, content)
 
 		elif content == 'help':
 			content = self.help()
@@ -203,12 +203,12 @@ class MainHandler(tornado.web.RequestHandler):
 		response = textTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), 'text', content)
 		return response
 
-	def image(self, msg):
-		self.send_message(msg['FromUserName'], msg['PicUrl'])
+	def image(self, msg, content):
+		self.send_message(msg['FromUserName'], msg['PicUrl'], content + '_reply')
 		return pictextTpl % (msg['FromUserName'], msg['ToUserName'], str(int(time.time())), '自动回复', 'pic', msg['PicUrl'], msg['PicUrl'])
 
 	def airlist(self, msg, content):
-		return self.send_message(msg['FromUserName'], content)
+		return self.send_message(msg['FromUserName'], content, content + '_reply')
 
 	def airbind(self, msg, content):
 		try:
@@ -219,7 +219,7 @@ class MainHandler(tornado.web.RequestHandler):
 			if not term:
 				result = 'term:' + str(index) + ' is not exist'
 			else:
-				result = self.send_message(msg['FromUserName'], 'airbind:' + term)
+				result = self.send_message(msg['FromUserName'], 'airbind:' + term, 'airbind_reply')
 		except:
 			logging.error('index is not int', exc_info=True)
 			result = "please input int"
@@ -228,16 +228,16 @@ class MainHandler(tornado.web.RequestHandler):
 		
 
 	def env(self, msg, content):
-		return self.send_message(msg['FromUserName'], content)
+		return self.send_message(msg['FromUserName'], content, content + '_reply')
 
 	def help(self):
 		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll\nairlist\nenv'
 
-	def open(self, msg):
-		return self.send_message(msg['FromUserName'], 'open')
+	def open(self, msg, content):
+		return self.send_message(msg['FromUserName'], content, content + '_reply')
 
-	def close(self, msg):
-		return self.send_message(msg['FromUserName'], 'close')
+	def close(self, msg, content):
+		return self.send_message(msg['FromUserName'], content, content + '_reply')
 
 	def parse_msg(self):
 		"""
@@ -274,8 +274,10 @@ class MainHandler(tornado.web.RequestHandler):
 			elif 'airlist_reply' == jsonmsg['action']:
 				cache.delete('pi:' + pi_id + ':airlist')
 				airlist = ''
+				list_index = 0
 				for data in jsonmsg['data']:
-					one = str(data['index']) + ':' + data['servicename'] + ':' + data['ip'] + ':' + str(data['port'])
+					list_index = list_index + 1
+					one = str(list_index) + '.:' + data['servicename'] + '_' + data['ip'] + ':' + str(data['port'])
 					airlist = airlist + one + '\n'
 					cache.rpush('pi:' + pi_id + ':airlist', json.dumps(data))
 				return airlist
@@ -447,7 +449,8 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			# if message == 'success' or message == 'failed' or message.startswith('http'):
 			try:
 				jsonmsg = json.loads(message)
-				cache.setex("pi_msg:" + pi_id, message, 5)
+				action = jsonmsg['action']
+				cache.setex("pi_msg:" + pi_id + ':' + action, message, 5)
 				return
 			except:
 				logging.error('message is not json', exc_info=True)
