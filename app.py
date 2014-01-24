@@ -270,7 +270,7 @@ class MainHandler(tornado.web.RequestHandler):
 				temperature = jsonmsg['data'][0]['temperature']
 				humidity = jsonmsg['data'][0]['humidity']
 				content = '温度：' + str(temperature) + '\n' + '湿度：' + str(humidity) + '%'
-				return 
+				return content
 
 			elif 'airlist_reply' == jsonmsg['action']:
 				cache.delete('pi:' + pi_id + ':airlist')
