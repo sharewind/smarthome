@@ -449,7 +449,7 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 			# if message == 'success' or message == 'failed' or message.startswith('http'):
 			try:
 				jsonmsg = json.loads(message)
-				cache.setex("pi_msg:" + pi_id, message, 15)
+				cache.setex("pi_msg:" + pi_id, message, 5)
 				return
 			except:
 				logging.error('message is not json', exc_info=True)
