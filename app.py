@@ -218,16 +218,10 @@ class MainHandler(tornado.web.RequestHandler):
 		return 'list获取设备ID列表\nbind+设备ID绑定设备\nunbind\nopen\nphoto\nroll\nairlist\nenv'
 
 	def open(self, msg):
-		return result = self.send_message(msg['FromUserName'], 'open')
-		# if result:
-		# 	return 'true'
-		# return 'false'
+		return self.send_message(msg['FromUserName'], 'open')
 
 	def close(self, msg):
-		return result = self.send_message(msg['FromUserName'], 'close')
-		# if result:
-		# 	return 'true'
-		# return 'false'
+		return self.send_message(msg['FromUserName'], 'close')
 
 	def parse_msg(self):
 		"""
