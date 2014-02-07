@@ -1,11 +1,34 @@
-mkdir -pv /opt/logs/nginx/
-mkdir -pv /opt/logs/supervisord/
-mkdir -pv /opt/logs/smart_home/
+通过微信订阅号控制的树莓派智能家居项目 
+(hackathon project)  
+
+需要一台在公网的vps做为微信订阅号的服务端，树莓派在启动时会自动通过websocket连接到服务端。  
+通过关注订阅号，输入绑定指令绑定相应的树莓派设备。
 
 
-sudo apt-get install libavahi-compat-libdnssd1
-virtualenv
-tornado=3.2
-redis
-supervisor
-pybonjour
+1.服务端安装指南  
+mkdir -pv /opt/logs/nginx/  
+mkdir -pv /opt/logs/supervisord/  
+mkdir -pv /opt/logs/smart_home/  
+
+
+sudo apt-get install libavahi-compat-libdnssd1  
+python 依赖  
+virtualenv  
+tornado=3.2  
+redis  
+supervisor  
+pybonjour  
+
+2.支持的控制命令  
+help 帮助命令  
+list获取设备ID列表  
+bind+设备ID 绑定设备(eg. bind123)  
+unbind 设备解绑  
+open 开灯  
+close 关灯  
+photo 远程照片  
+video 返回视频监控地址  
+airlist 设备可连接终端列表  
+airbind+终端编号(eg. airbind1)  
+env 环境数据  
+直接发送照片，投射到家里支持airplay的设备上  

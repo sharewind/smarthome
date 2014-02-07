@@ -25,7 +25,8 @@ import random
 from tornado.options import define, options
 
 define("port", default=8888, help="run on the given port", type=int)
-cache = redis.Redis(host='107.170.255.136', port=6379, db=0)
+cache = redis.Redis(host='127.0.0.1', port=6379, db=0)
+
 textTpl = """<xml>
 <ToUserName><![CDATA[%s]]></ToUserName>
 <FromUserName><![CDATA[%s]]></FromUserName>
@@ -56,8 +57,6 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r"/", MainHandler),
-            (r"/bind", WeiXinBindHandler),
-            (r"/wx", WeiXinHandler),
             (r"/smartsocket", PiSocketHandler),
         ]
         settings = dict(
@@ -144,7 +143,6 @@ class MainHandler(tornado.web.RequestHandler):
 			logging.info("before read message .............")
 			client_res = yield tornado.gen.Task(client.read_message)
 			logging.info("xxx%s",client_res)
-			logging.info("xxx%s",client_res.result())
 
 			if client_res.exception() is not None:
 				logging.error("client_error %s", str(client_res.exception()))
@@ -513,11 +511,10 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 		#else:
 		self.read_future = future
 
-		logging.info("222222my_read_message_from_client waitting.....")
 		if callback is not None:
 			logging.info("add_callbak on read_message")
 			self.ioloop.add_future(future, callback)
-		logging.info("333333my_read_message_from_client waitting.....")
+		logging.info("my_read_message_from_client waitting.....")
 		return future
 
 	def on_message(self, message):
@@ -531,20 +528,6 @@ class PiSocketHandler(tornado.websocket.WebSocketHandler):
 		#else:
 			#self.read_queue.append(message)
 
-class WeiXinBindHandler(tornado.web.RequestHandler):
-    def get(self):
-		wx_id = "185980656"
-		pi_id = "113696732"
-		PiSocketHandler.bind_wx(wx_id, pi_id)
-		PiSocketHandler.send_message(wx_id, "hello")
-		self.write("bind ok")
-
-class WeiXinHandler(tornado.web.RequestHandler):
-    def get(self):
-		wx_id = "185980656"
-		pi_id = "113696732"
-		PiSocketHandler.send_message(wx_id, "hello")
-		self.write("send message ok")
 
 
 def main():

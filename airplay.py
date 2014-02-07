@@ -88,7 +88,8 @@ def upload_image(image, callback=None):
 				callback(response.body)
 
 	filename = str(time.time() * 1000000) + ".jpg"
-	url = "http://pp.sohu.com/upload/api/sync?device=155828489132191744&access_token=416521fd-cb90-34d5-beb5-1a0e0855d282&filename=" + filename
+	token = "416521fd-cb90-34d5-beb5-1a0e0855d282"
+	url = "http://pp.sohu.com/upload/api/sync?device=155828489132191744&access_token=" +  token + "&filename=" + filename
 	request = tornado.httpclient.HTTPRequest(url, method='POST', body=image)
 	tornado.httpclient.AsyncHTTPClient().fetch(request, on_upload)
 
