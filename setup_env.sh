@@ -6,10 +6,10 @@ sudo pip install virtualenv
 sudo pip install supervisor
 
 virtualenv env
-source env/bin/active
+. env/bin/activate 
 
 #pip install -r requirements.txt 
-pip install -r requirements.txt -i http://localhost:6666/simple
+pip install -r requirements.txt -i http://localhost:9999/simple
 
 mkdir -pv /opt/logs/nginx/  
 mkdir -pv /opt/logs/supervisord/  
